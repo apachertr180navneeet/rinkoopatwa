@@ -6,7 +6,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Web\HomeController;
 use App\Http\Controllers\Admin\{
         AdminAuthController,
-        UserController
+        UserController,
+        StitchController
 
     };
 
@@ -63,6 +64,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('/update/{id}', [UserController::class, 'update'])->name('update');
             Route::post('/status', [UserController::class, 'changeStatus'])->name('status');
             Route::delete('/delete/{id}', [UserController::class, 'delete'])->name('delete');
+        });
+
+
+        // StitchController
+        Route::prefix('stitch')->name('stitch.')->group(function () {
+            Route::get('/', [StitchController::class, 'index'])->name('index');
+            Route::get('/getall', [StitchController::class, 'getAll'])->name('getall');
+            Route::post('/store', [StitchController::class, 'store'])->name('store');
+            Route::get('/edit/{id}', [StitchController::class, 'edit'])->name('edit');
+            Route::post('/update/{id}', [StitchController::class, 'update'])->name('update');
+            Route::post('/status', [StitchController::class, 'changeStatus'])->name('status');
+            Route::delete('/delete/{id}', [StitchController::class, 'delete'])->name('delete');
         });
 
     });

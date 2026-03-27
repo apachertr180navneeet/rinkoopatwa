@@ -13,6 +13,12 @@
             'icon'  => 'bx-user',
             'label' => 'Users',
         ],
+
+        [
+            'route' => 'admin.stitch.index',
+            'icon'  => 'bx-user',
+            'label' => 'Stitchs',
+        ],
     ];
 @endphp
 

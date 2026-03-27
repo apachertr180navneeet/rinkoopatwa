@@ -11,16 +11,16 @@ use Illuminate\Support\Str;
 use Mail, DB, Hash, Validator, Session, File,Exception;
 use Yajra\DataTables\Facades\DataTables;
 
-class UserController extends Controller
+class StitchController extends Controller
 {
     public function index()
     {
-        return view('admin.users.index');
+        return view('admin.stitch.index');
     }
 
     public function getAll(Request $request)
     {
-        $query = User::query()->where('role','user')->whereNull('deleted_at');
+        $query = User::query()->where('role','stitch')->whereNull('deleted_at');
 
         // Filter by name
         if ($request->name) {
@@ -68,27 +68,23 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name'     => 'required|string|max:255',
-            'mobile'   => 'required|digits_between:10,15',
-            'email'    => 'required|email|unique:users,email',
-            'city'     => 'required|string|max:255',
-            'password' => 'required|min:6'
+            'name'  => 'required',
+            'mobile' => 'required|digits:10',
+            'email' => 'required|email|unique:users,email',
         ]);
 
-        $user = User::create([
-            'full_name' => $request->name,
-            'phone'     => $request->mobile,
-            'email'     => $request->email,
-            'city'      => $request->city,
-            'password'  => Hash::make($request->password), // ✅ user input password
-            'role'      => 'user'
+        User::create([
+            'full_name'     => $request->name,
+            'phone'    => $request->mobile,
+            'email'    => $request->email,
+            'city'     => $request->city,
+            'password' => Hash::make($request->phone),
+
+            // ✅ DEFAULT ROLE
+            'role'     => 'stitch'
         ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'User created successfully',
-            'data'    => $user
-        ]);
+        return response()->json(['success' => true]);
     }
 
     public function edit($id)
@@ -98,29 +94,23 @@ class UserController extends Controller
 
     public function update(Request $request, $id)
     {
+        // Validation
         $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|unique:users,email,' . $id,
-            'mobile'   => 'nullable|digits_between:10,15',
-            'city'     => 'nullable|string|max:255',
-            'password' => 'nullable|min:6' // ✅ optional
+            'name'   => 'required|string|max:255',
+            'email'  => 'required|email',
+            'mobile' => 'nullable|digits_between:10,15',
         ]);
 
+        // Find user
         $user = User::findOrFail($id);
 
-        $data = [
-            'full_name' => $request->name,
-            'phone'     => $request->mobile,
-            'email'     => $request->email,
-            'city'      => $request->city,
-        ];
-
-        // ✅ Only update password if provided
-        if ($request->filled('password')) {
-            $data['password'] = Hash::make($request->password);
-        }
-
-        $user->update($data);
+        // Update only specific fields
+        $user->update([
+            'full_name'     => $request->name,
+            'phone'    => $request->mobile,
+            'email'    => $request->email,
+            'city'     => $request->city,
+        ]);
 
         return response()->json([
             'success' => true,
