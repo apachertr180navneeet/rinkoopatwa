@@ -20,6 +20,8 @@
         <link rel="stylesheet" href="{{asset('assets/admin/css/bootstrapDataTable.css')}}" />
         <link rel="stylesheet" href="{{asset('assets/admin/vendor/libs/perfect-scrollbar/perfect-scrollbar.css')}}" />
         <link rel="stylesheet" href="{{asset('assets/admin/vendor/libs/apex-charts/apex-charts.css')}}" />
+        {{-- Select2 CSS --}}
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
         <script src="{{asset('assets/admin/vendor/js/helpers.js')}}"></script>
         <script src="{{asset('assets/admin/js/config.js')}}"></script>
         <link rel="stylesheet" href="{{asset('assets/admin/css/sweet-alert.css')}}" />
@@ -54,6 +56,8 @@
                 <script src="{{asset('assets/admin/js/bootstrapDataTable.js')}}"></script>
                 <script src="{{asset('assets/admin/js/dashboards-analytics.js')}}"></script>
                 <script src="{{asset('assets/admin/js/moment.min.js')}}"></script>
+                {{-- Select2 JS --}}
+                <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
                 <script async defer src="https://buttons.github.io/buttons.js"></script>
                 @yield('script')
                 @include('admin.layouts.elements.sweet_alerts')

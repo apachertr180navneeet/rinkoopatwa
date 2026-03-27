@@ -12,10 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('categories', function (Blueprint $table) {
-            $table->id();                 // Primary key
-            $table->string('name');       // Category name
-            $table->softDeletes();        // Adds deleted_at column
-            $table->timestamps();         // created_at & updated_at
+            $table->id();
+            $table->string('name');
+            $table->enum('status', ['active', 'inactive'])->default('active');
+            $table->text('measurements')->nullable(); // Comma separated list of measurements
+            $table->string('youtube_url')->nullable();
+            $table->softDeletes();
+            $table->timestamps();
         });
     }
 

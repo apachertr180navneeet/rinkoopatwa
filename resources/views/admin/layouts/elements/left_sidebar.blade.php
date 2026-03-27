@@ -19,6 +19,11 @@
             'icon'  => 'bx-user',
             'label' => 'Stitchs',
         ],
+        [
+            'route' => 'admin.categories.index',
+            'icon'  => 'bx-ruler',
+            'label' => 'Measurement',
+        ],
     ];
 @endphp
 
