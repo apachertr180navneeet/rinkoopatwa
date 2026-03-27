@@ -34,5 +34,11 @@ class Category extends Model
             )
         );
     }
+
+    public function stitches()
+    {
+        return $this->belongsToMany(User::class, 'category_stitch', 'category_id', 'stitch_id')
+            ->withTimestamps();
+    }
 }
 

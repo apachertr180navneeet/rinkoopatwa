@@ -8,7 +8,8 @@ use App\Http\Controllers\Admin\{
         AdminAuthController,
         UserController,
         StitchController,
-        CategoryController
+        CategoryController,
+        OrderController
     };
 
 /*
@@ -89,6 +90,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
             // Select2 data
             Route::get('/select2', [CategoryController::class, 'select2'])->name('select2');
+        });
+
+        // Orders
+        Route::prefix('orders')->name('orders.')->group(function () {
+            Route::get('/', [OrderController::class, 'index'])->name('index');
+            Route::get('/getall', [OrderController::class, 'getAll'])->name('getall');
+            Route::post('/store', [OrderController::class, 'store'])->name('store');
+            Route::get('/edit/{id}', [OrderController::class, 'edit'])->name('edit');
+            Route::post('/update/{id}', [OrderController::class, 'update'])->name('update');
+            Route::delete('/delete/{id}', [OrderController::class, 'delete'])->name('delete');
         });
 
     });

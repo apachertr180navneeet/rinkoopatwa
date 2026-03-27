@@ -24,6 +24,11 @@
             'icon'  => 'bx-ruler',
             'label' => 'Measurement',
         ],
+        [
+            'route' => 'admin.orders.index',
+            'icon'  => 'bx-cart',
+            'label' => 'Orders',
+        ],
     ];
 @endphp
 
