@@ -7,6 +7,12 @@
             'icon'  => 'bx-home-circle',
             'label' => 'Dashboard',
         ],
+
+        [
+            'route' => 'admin.users.index',
+            'icon'  => 'bx-user',
+            'label' => 'Users',
+        ],
     ];
 @endphp
 

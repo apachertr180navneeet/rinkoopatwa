@@ -4,7 +4,11 @@ use Illuminate\Support\Facades\Route;
 
 // Controllers
 use App\Http\Controllers\Web\HomeController;
-use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\Admin\{
+        AdminAuthController,
+        UserController
+
+    };
 
 /*
 |--------------------------------------------------------------------------
@@ -47,6 +51,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
             Route::get('profile', 'adminProfile')->name('profile');
             Route::post('profile', 'updateAdminProfile')->name('update.profile');
+        });
+
+        // User Controller
+        Route::prefix('users')->name('users.')->group(function () {
+            Route::get('/', [UserController::class, 'index'])->name('index');
+            Route::get('/getall', [UserController::class, 'getAll'])->name('getall');
+            Route::get('/create', [UserController::class, 'create'])->name('create');
+            Route::post('/store', [UserController::class, 'store'])->name('store');
+            Route::get('/edit/{id}', [UserController::class, 'edit'])->name('edit');
+            Route::post('/update/{id}', [UserController::class, 'update'])->name('update');
+            Route::post('/status', [UserController::class, 'changeStatus'])->name('status');
+            Route::delete('/delete/{id}', [UserController::class, 'delete'])->name('delete');
         });
 
     });
