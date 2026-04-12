@@ -21,29 +21,45 @@
 }
 input:checked + .slider { background-color: #696cff; }
 input:checked + .slider:before { transform: translateX(22px); }
+
+/* PASSWORD ICON */
+.toggle-password {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #888;
+}
+.toggle-password:hover {
+    color: #333;
+}
 </style>
 @endsection
 
 @section('content')
+
+<!-- FONT AWESOME -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <div class="container-fluid py-4">
 
 <div class="card p-3">
 
     <div class="d-flex justify-content-between mb-3">
-        <h5>Stitch Management</h5>
+        <h5>Stitches Management</h5>
 
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#stitchModel">
-            Add Stitch
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#userModal">
+            Add Stitches
         </button>
     </div>
 
     <div class="d-flex gap-2 mb-3">
-        <input type="text" id="stitchName" class="form-control" placeholder="stitch Name">
+        <input type="text" id="userName" class="form-control" placeholder="User Name">
         <input type="text" id="globalSearch" class="form-control" placeholder="Search">
     </div>
 
-    <table class="table table-bordered" id="stitchTable">
+    <table class="table table-bordered" id="userTable">
         <thead>
             <tr>
                 <th>#</th>
@@ -61,36 +77,43 @@ input:checked + .slider:before { transform: translateX(22px); }
 </div>
 
 <!-- MODAL -->
-<!-- MODAL -->
-<div class="modal fade" id="stitchModel">
+<div class="modal fade" id="userModal">
     <div class="modal-dialog">
-        <form id="stitchForm">
+        <form id="userForm">
             @csrf
-            <input type="hidden" id="stitch_id">
+            <input type="hidden" id="user_id">
 
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 id="modalTitle">Stitch Form</h5>
+                    <h5>Stitches Form</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
 
                 <div class="modal-body">
 
-                    <input type="text" name="name" id="name" class="form-control mb-1" placeholder="Name">
+                    <input type="text" name="name" id="name" class="form-control mb-2" placeholder="Name">
                     <small class="text-danger error" id="error_name"></small>
 
-                    <input type="text" name="mobile" id="mobile" class="form-control mb-1" placeholder="Mobile">
+                    <input type="text" name="mobile" id="mobile" class="form-control mb-2" placeholder="Mobile">
                     <small class="text-danger error" id="error_mobile"></small>
 
-                    <input type="email" name="email" id="email" class="form-control mb-1" placeholder="Email">
+                    <input type="email" name="email" id="email" class="form-control mb-2" placeholder="Email">
                     <small class="text-danger error" id="error_email"></small>
 
-                    <input type="text" name="city" id="city" class="form-control mb-1" placeholder="Location">
-                    <small class="text-danger error" id="error_city"></small>
+                    <!-- PASSWORD FIELD -->
+                    <div class="position-relative mb-2">
+                        <input type="password" name="password" 
+                               class="form-control password-field" 
+                               placeholder="Password">
 
-                    <!-- ✅ PASSWORD FIELD -->
-                    <input type="password" name="password" id="password" class="form-control mb-1" placeholder="Password">
+                        <span class="toggle-password">
+                            <i class="fa fa-eye"></i>
+                        </span>
+                    </div>
                     <small class="text-danger error" id="error_password"></small>
+
+                    <input type="text" name="city" id="city" class="form-control mb-2" placeholder="Location">
+                    <small class="text-danger error" id="error_city"></small>
 
                 </div>
 
@@ -107,17 +130,16 @@ input:checked + .slider:before { transform: translateX(22px); }
 
 @section('script')
 
-
 <script>
 $(function () {
 
-    let table = $('#stitchTable').DataTable({
+    let table = $('#userTable').DataTable({
         processing: true,
         serverSide: true,
         ajax: {
-            url: "{{ route('admin.stitch.getall') }}",
+            url: "{{ route('admin.users.getall') }}",
             data: function (d) {
-                d.name = $('#stitchName').val();
+                d.name = $('#userName').val();
                 d.search_value = $('#globalSearch').val();
             }
         },
@@ -133,24 +155,44 @@ $(function () {
         order: [[1,'asc']]
     });
 
-    $('#stitchName, #globalSearch').keyup(function(){
+    $('#userName, #globalSearch').keyup(function(){
         table.draw();
     });
 
-    // CLEAR ERRORS
     function clearErrors(){
         $('.error').text('');
         $('.form-control').removeClass('is-invalid');
     }
 
+    // SHOW / HIDE PASSWORD
+    $(document).on('click', '.toggle-password', function () {
+
+        let input = $(this).siblings('.password-field');
+        let icon = $(this).find('i');
+
+        if (input.attr("type") === "password") {
+            input.attr("type", "text");
+            icon.removeClass("fa-eye").addClass("fa-eye-slash");
+        } else {
+            input.attr("type", "password");
+            icon.removeClass("fa-eye-slash").addClass("fa-eye");
+        }
+    });
+
+    // RESET PASSWORD WHEN MODAL OPEN
+    $('#userModal').on('shown.bs.modal', function () {
+        $('.password-field').val('').attr('type','password');
+        $('.toggle-password i').removeClass('fa-eye-slash').addClass('fa-eye');
+    });
+
     // SAVE
-    $('#stitchForm').submit(function(e){
+    $('#userForm').submit(function(e){
         e.preventDefault();
 
         clearErrors();
 
-        let id = $('#stitch_id').val();
-        let url = id ? 'stitch/update/'+id : "{{ route('admin.stitch.store') }}";
+        let id = $('#user_id').val();
+        let url = id ? 'users/update/'+id : "{{ route('admin.users.store') }}";
 
         $('#saveBtn').prop('disabled', true).text('Saving...');
 
@@ -160,14 +202,14 @@ $(function () {
             data: $(this).serialize(),
 
             success: function(res){
-                $('#stitchModel').modal('hide');
+                $('#userModal').modal('hide');
                 table.draw();
-                $('#stitchForm')[0].reset();
+                $('#userForm')[0].reset();
 
                 Swal.fire({
                     icon: 'success',
                     title: 'Success',
-                    text: 'stitch saved successfully',
+                    text: 'User saved successfully',
                     timer: 1500,
                     showConfirmButton: false
                 });
@@ -194,14 +236,16 @@ $(function () {
 
         let id = $(this).data('id');
 
-        $.get('stitch/edit/'+id, function(data){
-            $('#stitch_id').val(data.id);
+        $.get('users/edit/'+id, function(data){
+            $('#user_id').val(data.id);
             $('#name').val(data.full_name);
             $('#mobile').val(data.phone);
             $('#email').val(data.email);
             $('#city').val(data.city);
 
-            $('#stitchModel').modal('show');
+            $('.password-field').val('');
+
+            $('#userModal').modal('show');
         });
     });
 
@@ -211,7 +255,7 @@ $(function () {
 
         Swal.fire({
             title: 'Are you sure?',
-            text: "You want to delete this stitch",
+            text: "You want to delete this user",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Yes'
@@ -220,7 +264,7 @@ $(function () {
             if (result.isConfirmed) {
 
                 $.ajax({
-                    url:'stitch/delete/'+id,
+                    url:'users/delete/'+id,
                     type:'DELETE',
                     data:{_token:'{{ csrf_token() }}'},
 
@@ -253,7 +297,7 @@ $(function () {
 
             if(result.isConfirmed){
 
-                $.post("{{ route('admin.stitch.status') }}", {
+                $.post("{{ route('admin.users.status') }}", {
                     _token:'{{ csrf_token() }}',
                     id:id
                 }, function(){

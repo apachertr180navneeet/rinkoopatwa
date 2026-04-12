@@ -72,7 +72,7 @@ class UserController extends Controller
             'mobile'   => 'required|digits_between:10,15',
             'email'    => 'required|email|unique:users,email',
             'city'     => 'required|string|max:255',
-            'password' => 'required|min:6'
+            'password' => 'nullable|min:6'
         ]);
 
         $user = User::create([
