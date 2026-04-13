@@ -137,7 +137,7 @@ $(function () {
         processing: true,
         serverSide: true,
         ajax: {
-            url: "{{ route('admin.users.getall') }}",
+            url: "{{ route('admin.stitch.getall') }}",
             data: function (d) {
                 d.name = $('#userName').val();
                 d.search_value = $('#globalSearch').val();
@@ -192,7 +192,7 @@ $(function () {
         clearErrors();
 
         let id = $('#user_id').val();
-        let url = id ? 'users/update/'+id : "{{ route('admin.users.store') }}";
+        let url = id ? 'stitch/update/'+id : "{{ route('admin.stitch.store') }}";
 
         $('#saveBtn').prop('disabled', true).text('Saving...');
 
@@ -236,7 +236,7 @@ $(function () {
 
         let id = $(this).data('id');
 
-        $.get('users/edit/'+id, function(data){
+        $.get('stitch/edit/'+id, function(data){
             $('#user_id').val(data.id);
             $('#name').val(data.full_name);
             $('#mobile').val(data.phone);

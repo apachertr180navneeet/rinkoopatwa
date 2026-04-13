@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\MasterAuthController;
 
 
 
@@ -39,4 +40,15 @@ Route::middleware('jwt.verify')->group(function() {
     Route::post('/createorder', [AuthController::class, 'orderCreate']);
     Route::get('/orderlist', [AuthController::class, 'orderlist']);
     
+});
+
+
+
+Route::group(['prefix'=>'master-auth'], function(){
+    Route::post('/login', [MasterAuthController::class, 'login']);
+});
+
+Route::middleware('jwt.verify')->group(function() {
+    Route::get('master/user', [MasterAuthController::class, 'getMaster']);    
+    Route::post('/logout', [MasterAuthController::class, 'logout']);
 });

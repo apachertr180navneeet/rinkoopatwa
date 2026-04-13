@@ -78,7 +78,7 @@ class StitchController extends Controller
             'phone'    => $request->mobile,
             'email'    => $request->email,
             'city'     => $request->city,
-            'password' => Hash::make($request->phone),
+            'password' => Hash::make($request->password),
 
             // ✅ DEFAULT ROLE
             'role'     => 'stitch'
@@ -99,18 +99,27 @@ class StitchController extends Controller
             'name'   => 'required|string|max:255',
             'email'  => 'required|email',
             'mobile' => 'nullable|digits_between:10,15',
+            'password' => 'nullable|min:6'
         ]);
 
         // Find user
         $user = User::findOrFail($id);
 
-        // Update only specific fields
-        $user->update([
-            'full_name'     => $request->name,
-            'phone'    => $request->mobile,
-            'email'    => $request->email,
-            'city'     => $request->city,
-        ]);
+        // Update data array
+        $data = [
+            'full_name' => $request->name,
+            'phone'     => $request->mobile,
+            'email'     => $request->email,
+            'city'      => $request->city,
+        ];
+
+        // ✅ Password only if provided
+        if (!empty($request->password)) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        // Update user
+        $user->update($data);
 
         return response()->json([
             'success' => true,
