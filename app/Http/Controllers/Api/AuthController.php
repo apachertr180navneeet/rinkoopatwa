@@ -9,77 +9,71 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Mail,Hash,File,DB,Helper,Auth;
-use App\Mail\UserRegisterVerifyMail;
-use App\Models\EmailOtp;
 use App\Models\PhoneOtp;
 use App\Models\AppUser;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Filesystem\Filesystem;
-use App\Models\SplashScreen;
+use App\Models\Category;
+use App\Models\Order;
+use Carbon\Carbon;
 
 
 
 class AuthController extends Controller
 {
-    
-    public function splashScreens(){
-        $base_url = asset('/');
-        $splash_screens = SplashScreen::select('type','heading','content','image')->get();
-        foreach ($splash_screens as $key => $screen) {
-            if($screen['image']){
-                $screen['image'] = $base_url.$screen['image'];
-            }
-        }
-        return response()->json([
-            'status' => true,
-            'data' => $splash_screens,
-        ],200);
 
-    }
-
-    public function sendPhoneOtp(Request $request){
+    public function sendPhoneOtp(Request $request)
+    {
         $data = $request->all();
         $validator = Validator::make($data, [
             'phone' => 'required|digits_between:4,13',
-            'country_code' => "required|max:5",
+            'country_code' => 'required|max:5'
         ]);
         
-        if($validator->fails()) {
+        if ($validator->fails()) {
             return response()->json([
                 'status' => false,
                 'message' =>  $validator->errors()->first(),
-            ],200);
+            ], 200);
         }
 
-        // $code = rand(1000,9999);
-        $code = '1234';
+        // For testing: fixed OTP (change to rand(1000,9999) in production)
+        $code = rand(1000,9999);
+        //$code = '1234';
+
         $date = date('Y-m-d H:i:s');
         $currentDate = strtotime($date);
-        $futureDate = $currentDate+(60*120);
-        $phone_user = PhoneOtp::where('country_code',$data['country_code'])->where('phone',$data['phone'])->first();
-        if(!$phone_user){
+        $futureDate = $currentDate + (60 * 120);
+
+        $phone_user = PhoneOtp::where('country_code', $data['country_code'])
+                            ->where('phone', $data['phone'])
+                            ->first();
+
+        if (!$phone_user) {
             $phone_user = new PhoneOtp();
         }
+
         $phone_user->phone = $data['phone'];
         $phone_user->country_code = $data['country_code'];
         $phone_user->otp = $code;
         $phone_user->otp_expire_time = $futureDate;
         $phone_user->save();
+
         return response()->json([
             'status' => true,
-            'message' =>  'A one-time password has been sent to your phone, please check.',
-        ],200);
-            
-        
+            'message' => 'A one-time password has been sent to your phone, please check.',
+            'otp' => $code,  // ✅ OTP also returned in response
+        ], 200);
     }
 
-    public function verifyPhoneOtp(Request $request){
+    public function verifyPhoneOtp(Request $request)
+    {
         $data = $request->all();
         $validator = Validator::make($data, [
             'phone' => 'required|digits_between:4,13',
             'country_code' => "required|max:5",
             'otp' => "required|max:4",
+            'device_token' => 'nullable',
         ]);
+
         if($validator->fails()) {
             return response()->json([
                 'status' => false,
@@ -87,113 +81,206 @@ class AuthController extends Controller
             ],200);
         }
         
-        $phone_user = PhoneOtp::where('country_code',$data['country_code'])->where('phone',$data['phone'])->first();
-        if($phone_user){
-            $date = date('Y-m-d H:i:s');
-            $currentTime = strtotime($date);
-            if($phone_user->otp == $data['otp']){
-                if($currentTime < $phone_user->otp_expire_time){
-                    PhoneOtp::where('country_code',$data['country_code'])->where('phone',$data['phone'])->delete();
-                    return response()->json([
-                        'status' => true,
-                        'message' =>  'Verified successfully.',
-                    ],200);
-                }else{
-                    return response()->json([
-                        'status' => true,
-                        'message' =>  'Verification code is expired.',
-                    ],200);
-                }
-            }else{
-                return response()->json([
-                    'status' => false,
-                    'message' =>  'Invalid verification code. Please try again',
-                ],200);
-            }
+        $phone_user = PhoneOtp::where('country_code',$data['country_code'])
+                            ->where('phone',$data['phone'])
+                            ->first();
 
-        }else{
+        if(!$phone_user){
             return response()->json([
                 'status' => false,
                 'message'=>'Invalid phone number. Please check and try again'
             ],200);
         }
-        
-    }
 
-    public function register(Request $request) 
-    {
-        $data = $request->all();
-        $validator = Validator::make($data, [
-            'first_name' => 'required|string',
-            'last_name' => 'required|string',
-            'email' => 'required|email|unique:users',
-            'phone' => 'required|numeric|digits_between:4,12|unique:users',
-            'password' => 'required|min:6',
-            'address' => 'required',
-            'area' => 'sometimes',
-            'city' => 'sometimes',
-            'state' => 'sometimes',
-            'country' => 'sometimes',
-            'country_code' => 'required|numeric',
-            'zipcode' => 'sometimes',
-            'latitude' => 'required',
-            'longitude' => 'required',
-            'bio' => 'sometimes',
-            'device_type' => 'sometimes',
-            'device_token' => 'sometimes',
-            'avatar'  =>  'required|image|mimes:jpeg,jpg,png|max:5000',
-        ],[
-            'email.email' => 'Invalid email format. Please try again',
-            'email.unique' => 'This email is already registered. Please sign in or use a different email',
-            'password.min' => 'Password must be at least 6 characters long',
-            'dob.before_or_equal' => 'The date of birth must be greater than or equal to 16 years ago.',
-        ]);
-        
-        if($validator->fails()){
+        $currentTime = strtotime(now());
+
+        if($phone_user->otp != $data['otp']){
             return response()->json([
                 'status' => false,
-                'message' =>  $validator->errors()->first(),
+                'message' =>  'Invalid verification code. Please try again',
             ],200);
         }
-        try
-        {
-            AppUser::where('phone',$request->phone)->where('country_code',$request->country_code)->delete();
-            $app_user = new AppUser();
-            $app_user->first_name = $request->first_name;
-            $app_user->last_name = $request->last_name;
-            $app_user->full_name = $request->first_name.' '.$request->last_name;
-            $app_user->slug = Helper::slug('users',$app_user->full_name);
-            $app_user->email = $request->email;
-            $app_user->phone = $request->phone;
-            $app_user->password = $request->password;
-            $app_user->address = $request->address;
-            $app_user->area = $request->area ?? '';
-            $app_user->city = $request->city ?? '';
-            $app_user->state = $request->state ?? '';
-            $app_user->country = $request->country ?? '';
-            $app_user->country_code = $request->country_code;
-            $app_user->zipcode = $request->zipcode ?? '';
-            $app_user->latitude = $request->latitude;
-            $app_user->longitude = $request->longitude;
-            $app_user->bio = $request->bio ?? '';
-            $app_user->device_type = $request->device_type ?? '';
-            $app_user->device_token = $request->device_token ?? '';
-            $app_user->avatar = $request->avatar;
-            $app_user->save();
-            
+
+        if($currentTime > $phone_user->otp_expire_time){
+            return response()->json([
+                'status' => false,
+                'message' =>  'Verification code is expired.',
+            ],200);
+        }
+
+        // OTP verified → delete it
+        PhoneOtp::where('country_code',$data['country_code'])
+                ->where('phone',$data['phone'])
+                ->delete();
+
+        // Find user
+        $user = User::where('phone',$data['phone'])
+                    ->where('country_code',$data['country_code'])
+                    ->where('role','user')
+                    ->first();
+
+        if(!$user){
+            return response()->json([
+                'status' => false,
+                'message' => 'Phone number not exists',
+            ],200);
+        }
+
+        if($user->status == 'inactive'){
+            return response()->json([
+                'status' => false,
+                'message' => 'Your account is not activated yet.',
+            ],200);
+        }
+
+        // Prepare JWT login
+        $credentials = [
+            'phone' => $user->phone,
+            'country_code' => $user->country_code,
+            'password' => $user->full_name, // same logic you used in login()
+        ];
+
+        try {
+            if(!$token = JWTAuth::attempt($credentials)) {
+                return response()->json([
+                    'status' => false,
+                    'message'=>'Something went wrong. Please try again'
+                ],200);
+            }
+
+
+            if(!empty($data['device_token'])){
+                $user->device_token = $data['device_token'];
+            }
+
+            // Save device info
+            $user->save();
+
             return response()->json([
                 'status' => true,
-                'message' => 'Otp is sent on your phone! Please verify otp to complete your registration',
+                'message'=>'Verified & logged in successfully.',
+                'access_token' => $token,
+                'token_type' => 'bearer',
+                'user' => $this->getUserDetail($user->id),
             ],200);
 
-        }
-        catch (Exception $e) {
+        } catch (JWTException $e) {
             return response()->json([
                 'status' => false,
                 'message' => $e->getMessage(),
             ],200);
         }
-        
+    }
+
+    public function register(Request $request)
+    {
+        /**
+         * ---------------------------------------------------------
+         * Step 1: Validate Request Data
+         * ---------------------------------------------------------
+         */
+        $validator = Validator::make($request->all(), [
+            'name'         => 'required|string|max:100',
+            'email'        => 'required|email|unique:users,email',
+            'phone'        => 'required|numeric|digits_between:4,12|unique:users,phone',
+            'location'     => 'required|string|max:150',
+            'country_code' => 'required|string|max:5',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => false,
+                'message' => $validator->errors()->first(),
+            ], 200);
+        }
+
+        /**
+         * ---------------------------------------------------------
+         * Step 2: Use DB Transaction (Safe Insert)
+         * ---------------------------------------------------------
+         */
+        DB::beginTransaction();
+
+        try {
+
+            /**
+             * ---------------------------------------------------------
+             * Step 3: Create New User
+             * ---------------------------------------------------------
+             */
+            $appUser = AppUser::create([
+                'full_name' => $request->name,
+                'email'     => $request->email,
+                'phone'     => $request->phone,
+                'city'      => $request->location,
+                'country_code' => $request->country_code
+            ]);
+
+            /**
+             * ---------------------------------------------------------
+             * Step 4: Generate OTP
+             * ---------------------------------------------------------
+             */
+            $otp = rand(1000, 9999);
+
+            /**
+             * ---------------------------------------------------------
+             * Step 5: Set OTP Expiry (2 Hours)
+             * Laravel Way using Carbon
+             * ---------------------------------------------------------
+             */
+            $expireTime = Carbon::now()->addHours(2);
+
+            /**
+             * ---------------------------------------------------------
+             * Step 6: Update or Create OTP Record
+             * ---------------------------------------------------------
+             */
+            PhoneOtp::updateOrCreate(
+                [
+                    'phone'        => $request->phone,
+                    'country_code' => $request->country_code,
+                ],
+                [
+                    'otp'              => $otp,
+                    'otp_expire_time'  => $expireTime,
+                ]
+            );
+
+            /**
+             * ---------------------------------------------------------
+             * Step 7: Commit Transaction
+             * ---------------------------------------------------------
+             */
+            DB::commit();
+
+            /**
+             * ---------------------------------------------------------
+             * Step 8: Return Response
+             * NOTE: Do NOT send OTP in production
+             * ---------------------------------------------------------
+             */
+            return response()->json([
+                'status'  => true,
+                'message' => 'OTP sent successfully. Please verify to complete registration.',
+                'otp'     => $otp // ❌ Remove this in production
+            ], 200);
+
+        } catch (\Exception $e) {
+
+            /**
+             * ---------------------------------------------------------
+             * Step 9: Rollback if Error
+             * ---------------------------------------------------------
+             */
+            DB::rollBack();
+
+            return response()->json([
+                'status'  => false,
+                'message' => 'Something went wrong!',
+                'error'   => $e->getMessage(), // remove in production
+            ], 200);
+        }
     }
 
     public function verifyRegister(Request $request){
@@ -239,7 +326,7 @@ class AuthController extends Controller
             $user->email = $app_user->email;
             $user->slug = $app_user->slug;
             $user->phone = $app_user->phone;
-            $user->password = bcrypt($app_user->password);
+            $user->password = bcrypt($app_user->full_name);
             $user->address = $app_user->address;
             $user->area = $app_user->area ?? '';
             $user->city = $app_user->city ?? '';
@@ -264,7 +351,7 @@ class AuthController extends Controller
             //============ Make User Login ==========//
             $input['phone'] = $app_user->phone;
             $input['country_code'] = $app_user->country_code;
-            $input['password'] = $app_user->password;
+            $input['password'] = $app_user->full_name;
             $token = JWTAuth::attempt($input);
             $app_user->delete();
             
@@ -284,89 +371,6 @@ class AuthController extends Controller
             ],200);
         }
 
-    }
-
-    
-    public function login(Request $request)
-    {
-        $data = $request->all();
-        $validator = Validator::make($data, [
-            'phone' => 'required|numeric',
-            'country_code' => 'required|numeric',
-            'password' => 'required',
-            'device_type'=>'required|in:ios,android',
-            'device_token'=>'required',
-        ]);
-
-        if($validator->fails()){
-            return response()->json([
-                'status' => false,
-                'message' => $validator->errors()->first(),
-            ],200);
-        }
-        
-        try
-        {
-            $user = User::where('phone',$data['phone'])->where('country_code',$data['country_code'])->where('role','user')->first();
-           
-            if(!$user){
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Phone number not exists',
-                ]);      
-            }
-
-            if($user->status == 'inactive'){
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Your account is not activacted yet.',
-                ]);      
-            }
-            
-            $input['phone'] = $data['phone'];
-            $input['country_code'] = $data['country_code'];
-            $input['password'] = $data['password'];
-
-            if(!$token = JWTAuth::attempt($input)) {
-                return response()->json([
-                    'status' => false,
-                    'message'=>'Invalid phone or password. Please try again'
-                ],200);
-            }
-
-            $user = User::find(auth()->user()->id);
-            $user->device_type = $data['device_type'];
-            $user->device_token = $data['device_token'];
-            $user->save();
-            
-            return response()->json([
-                'status' => true,
-                'message'=>'Loggedin successfully.',
-                'access_token' => $token,
-                'token_type' => 'bearer',
-                'user' => $this->getUserDetail(auth()->user()->id),
-            ],200);
-        }
-        catch (JWTException $e) {
-            return response()->json([
-                'status' => false,
-                'message' => $e->getMessage(),
-            ],200);
-        }
-    }
-
-    public function refresh() {
-        return $this->createNewToken(JWTAuth::refresh());
-    }
-
-    protected function createNewToken($token){
-        return response()->json([
-            'status' => true,
-            'access_token' => $token,
-            'token_type' => 'bearer',
-            'user' => auth()->user(),
-            'message'=>'Token refresh successfully.'
-        ],200);
     }
 
     public function getUser() 
@@ -393,171 +397,64 @@ class AuthController extends Controller
             ],200);
         }
     }
-
-    public function setForgotPassword(Request $request){
-        $data = $request->all();
-        $validator = Validator::make($data, [
-            'phone' => 'required|exists:users,phone|digits_between:4,13',
-            'country_code' => "required|exists:users,country_code|max:5",
-            'password' => 'required|string|confirmed|min:6',
-        ]);
-        
-        if($validator->fails()) {
-            return response()->json([
-                'status' => false,
-                'message' =>  $validator->errors()->first(),
-            ],200);
-        }
-        
-        $user = User::where('phone',$data['phone'])->where('country_code',$data['country_code'])->first();
-        if($user){
-            if(Hash::check($request->password,$user->password)){
-                return response()->json([
-                    'status' => false,
-                    'message' =>  'Cannot use your old password as new password.',
-                ],200);
-            }else{
-                $user->password = Hash::make($request->password);
-                $user->save();
-                return response()->json([
-                    'status' => true,
-                    'message' =>  'New Password set successfully.Please Login'    
-                ],200);
-            } 
-        } 
-        else{
-            return response()->json([
-                'status' => false,
-                'message' =>  'Phone number user not exists'
-            ],200);
-        }
-        
-    }
-
-    public function changePassword(Request $request){
-        $data = $request->all();
-        $user = auth()->user();  
-        $validator = Validator::make($data, [
-            'old_password' => 'required',
-            'new_password' => 'confirmed|required|string|min:6',
-        ]);
-        if($validator->fails()) {
-            return response()->json([
-                'status' => false,
-                'message' =>  $validator->errors()->first()
-            ],200);
-        }
-        
-        $user = auth()->user();  
-        if(Hash::check($request->new_password,$user->password)) {
-            return response()->json([
-                'status' => false,
-                'message' =>  'Cannot use your old password as new password.',
-            ],200);
-        }
-        
-        if(!Hash::check($request->old_password,$user->password)) {
-            return response()->json([
-                'status' => false,
-                'message' =>  'Old Password did not matched!',
-
-
-            ],200);
-        }
-     
-        $user->password = Hash::make($request->new_password);
-        $user->save();
-        // JWTAuth::parseToken()->invalidate(true);
-        return response()->json([
-            'status' => true,
-            'message' =>  'Password changed successfully',
-            'user' => $this->getUserDetail($user->id),
-        ],200);
-         
-    }
     
-    public function updateProfile(Request $request){
-        $data   =   $request->all();
+    public function updateProfile(Request $request)
+    {
         $id = auth()->user()->id;
 
-        $validator = Validator::make($data, [
-            'first_name' => 'sometimes|string',
-            'last_name' => 'sometimes|string',
-            'email'     =>  'sometimes|email|unique:users,email,'.$id,
-            'phone'     =>  'sometimes|numeric|digits_between:4,12|unique:users,phone,'.$id,
-            'password' => 'sometimes|min:6',
-            'avatar'  =>  'sometimes|mimes:jpeg,jpg,png|max:5000',
-            'address' => 'sometimes',
-            'area' => 'sometimes',
-            'city' => 'sometimes',
-            'state' => 'sometimes',
-            'country' => 'sometimes',
-            'country_code' => 'sometimes|numeric',
-            'zipcode' => 'sometimes',
-            'latitude' => 'sometimes',
-            'longitude' => 'sometimes',
-            'bio' => 'sometimes',
-            'device_type' => 'sometimes',
-            'device_token' => 'sometimes',
-        ],[
-            'dob.after_or_equal' => 'The date of birth must be greater than or equal to 16 years ago.',
+        $validator = Validator::make($request->all(), [
+            'name'     => 'sometimes|string',
+            'email'         => 'sometimes|email|unique:users,email,' . $id,
+            'phone'         => 'sometimes|numeric|digits_between:4,12|unique:users,phone,' . $id,
+            'location'       => 'sometimes|string',
+            'country_code'  => 'sometimes|numeric',
         ]);
 
-       
-        if($validator->fails()) {
-            return response()->json(array(
+        if ($validator->fails()) {
+            return response()->json([
                 'status' => false,
-                'message' =>  $validator->errors()->first()
-            ),200);
+                'message' => $validator->errors()->first()
+            ], 200);
         }
 
-        try{
-            
+        try {
             $user = User::find($id);
-            foreach($data as $key => $value){
-                if(!empty($data[$key])){
-                    if($key == 'first_name'){
-                        $user->first_name = $value;
-                        $user->full_name = $user->first_name.' '.$user->last_name;
-                    }
-                    elseif($key == 'last_name'){
-                        $user->last_name = $value;
-                        $user->full_name = $user->first_name.' '.$user->last_name;
-                        
-                    }
-                    elseif($key == 'avatar'){
-                        $file = $request->file('avatar');
-                        if($file){
-                            $filename   = time().$file->getClientOriginalName();
-                            $filename   =  Helper::cleanImage($filename);
-                            $folder = 'uploads/user/';
-                            $path = public_path($folder);
-                            if(!File::exists($path)) {
-                                File::makeDirectory($path, $mode = 0777, true, true);
-                            }
-                            $file->move($path, $filename);
-                            $user->avatar   = $folder.$filename;
-                        }
-                    }
-                    else{
-                        $user->$key = $value;
-                    }
-                }
+
+            if ($request->filled('name')) {
+                $user->full_name = $request->name;
+                $user->password = bcrypt($request->name);
             }
+
+            if ($request->filled('email')) {
+                $user->email = $request->email;
+            }
+
+            if ($request->filled('phone')) {
+                $user->phone = $request->phone;
+            }
+
+            if ($request->filled('location')) {
+                $user->city = $request->location;
+            }
+
+            if ($request->filled('country_code')) {
+                $user->country_code = $request->country_code;
+            }
+
             $user->save();
-            
-            return response()->json(array(
+
+            return response()->json([
                 'status' => true,
                 'message' => 'Profile updated successfully!',
                 'user' => $this->getUserDetail($user->id),
-            ),200);
-        }
-        catch(Exception $e){
-            return response()->json(array(
+            ], 200);
+
+        } catch (Exception $e) {
+            return response()->json([
                 'status' => false,
                 'message' => $e->getMessage()
-            ),200);
-        }    
+            ], 200);
+        }
     }
 
     
@@ -600,5 +497,373 @@ class AuthController extends Controller
         }   
 
 
+    }
+
+    public function getCategory()
+    {
+        try {
+            // Authenticate user via JWT
+            $user = JWTAuth::parseToken()->authenticate();
+
+            if (!$user) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User not found.'
+                ], 200);
+            }
+
+            // Fetch categories where status = active with pagination (10 per page)
+            $categories = Category::where('status', 'active')
+                ->orderBy('id', 'desc')
+                ->paginate(10);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Category found successfully.',
+                'data' => $categories
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 200);
+        }
+    }
+
+
+    public function getCategoryDetail(Request $request)
+    {
+        try {
+            /**
+             * ---------------------------------------------------------
+             * Authenticate User via JWT Token
+             * ---------------------------------------------------------
+             */
+            $user = JWTAuth::parseToken()->authenticate();
+
+            if (!$user) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User not found.'
+                ], 200);
+            }
+
+            /**
+             * ---------------------------------------------------------
+             * Validate Incoming Request
+             * - category: required (comma-separated IDs like "1,2,3")
+             * ---------------------------------------------------------
+             */
+            $request->validate([
+                'category' => 'required|string'
+            ]);
+
+            /**
+             * ---------------------------------------------------------
+             * Convert Comma-Separated IDs to Clean Integer Array
+             * Steps:
+             * 1. explode() → split string into array
+             * 2. trim() → remove extra spaces
+             * 3. cast to int → ensure numeric values
+             * 4. filter() → remove invalid/empty values
+             * ---------------------------------------------------------
+             */
+            $ids = collect(explode(',', $request->category))
+                ->map(fn($id) => (int) trim($id))
+                ->filter()
+                ->values();
+
+            /**
+             * ---------------------------------------------------------
+             * Fetch Categories from Database
+             * - Only required columns are selected
+             * - Sorted by latest ID (descending)
+             * ---------------------------------------------------------
+             */
+            $categories = Category::whereIn('id', $ids)
+                ->latest('id')
+                ->get(['id', 'name', 'youtube_url', 'measurements']);
+
+            /**
+             * ---------------------------------------------------------
+             * Prepare Category Response Data
+             * - Only return required fields
+             * ---------------------------------------------------------
+             */
+            $categoryData = $categories->map->only([
+                'id',
+                'name',
+                'youtube_url'
+            ]);
+
+            /**
+             * ---------------------------------------------------------
+             * Combine Measurements from All Categories
+             * Steps:
+             * 1. pluck() → get all measurement strings
+             * 2. filter() → remove null/empty values
+             * 3. flatMap() → split comma-separated values into array
+             * 4. trim() → clean spaces
+             * 5. unique() → remove duplicates
+             * 6. values() → reset array index
+             * ---------------------------------------------------------
+             */
+            $measurements = $categories
+                ->pluck('measurements')
+                ->filter()
+                ->flatMap(fn($m) => explode(',', $m))
+                ->map(fn($m) => trim($m))
+                ->filter()
+                ->unique()
+                ->values();
+
+            /**
+             * ---------------------------------------------------------
+             * Final JSON Response
+             * ---------------------------------------------------------
+             */
+            return response()->json([
+                'status' => true,
+                'message' => 'Categories found successfully.',
+                'data' => [
+                    'categories' => $categoryData,
+                    'measurements' => $measurements
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+
+            /**
+             * ---------------------------------------------------------
+             * Exception Handling
+             * ---------------------------------------------------------
+             */
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 200);
+        }
+    }
+
+    public function orderCreate(Request $request)
+    {
+        try {
+            /**
+             * ---------------------------------------------------------
+             * Authenticate User
+             * ---------------------------------------------------------
+             */
+            $user = JWTAuth::parseToken()->authenticate();
+
+            //dd($user);
+
+            if (!$user) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User not found.'
+                ], 200);
+            }
+
+            /**
+             * ---------------------------------------------------------
+             * Generate Order Number
+             * ---------------------------------------------------------
+             */
+            $lastOrder = Order::latest()->first();
+
+            $orderNo = 'ORD-00001';
+            if ($lastOrder) {
+                $number = (int) str_replace('ORD-', '', $lastOrder->order_no);
+                $orderNo = 'ORD-' . str_pad($number + 1, 5, '0', STR_PAD_LEFT);
+            }
+
+            /**
+             * ---------------------------------------------------------
+             * Upload Images (public/uploads/order)
+             * ---------------------------------------------------------
+             */
+            $uploadPath = public_path('uploads/order');
+
+            // Create folder if not exists
+            if (!file_exists($uploadPath)) {
+                mkdir($uploadPath, 0777, true);
+            }
+
+            // FRONT PHOTO
+            $frontPhoto = null;
+            if ($request->hasFile('front_photo')) {
+                $file = $request->file('front_photo');
+                $name = time() . '_front_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $file->move($uploadPath, $name);
+
+                $frontPhoto = url('uploads/order/' . $name);
+            }
+
+            // SIDE PHOTO
+            $sidePhoto = null;
+            if ($request->hasFile('side_photo')) {
+                $file = $request->file('side_photo');
+                $name = time() . '_side_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $file->move($uploadPath, $name);
+
+                $sidePhoto = url('uploads/order/' . $name);
+            }
+
+            // BACK PHOTO
+            $backPhoto = null;
+            if ($request->hasFile('back_photo')) {
+                $file = $request->file('back_photo');
+                $name = time() . '_back_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $file->move($uploadPath, $name);
+
+                $backPhoto = url('uploads/order/' . $name);
+            }
+
+            /**
+             * ---------------------------------------------------------
+             * Convert JSON Fields
+             * ---------------------------------------------------------
+             */
+            $measurementJson = $request->mesurment_json 
+                ? json_encode($request->mesurment_json) 
+                : null;
+
+            $additionalRequirement = $request->additional_requirement 
+                ? json_encode($request->additional_requirement) 
+                : null;
+
+            /**
+             * ---------------------------------------------------------
+             * Category Handling
+             * ---------------------------------------------------------
+             */
+            $categoryIds = $request->category_id ;
+
+            /**
+             * ---------------------------------------------------------
+             * Create Order
+             * ---------------------------------------------------------
+             */
+            $order = Order::create([
+                'order_no' => $orderNo,
+                'user_name' => $user->full_name ?? null,
+                'mobile' => $user->phone ?? null,
+                'email' => $user->email ?? null,
+                'stitch_for_name' => $request->stitch_for_name,
+                'phone_no' => $request->phone_no,
+                'height' => $request->height,
+                'body_weight' => $request->body_weight,
+                'shoes_size' => $request->shoes_size,
+                'front_photo' => $frontPhoto,
+                'side_photo' => $sidePhoto,
+                'back_photo' => $backPhoto,
+                'mesurment_json' => $measurementJson,
+                'additional_requirement' => $additionalRequirement,
+                'category_id' => $categoryIds,
+            ]);
+
+            /**
+             * ---------------------------------------------------------
+             * Response
+             * ---------------------------------------------------------
+             */
+            return response()->json([
+                'status' => true,
+                'message' => 'Order created successfully.',
+                'data' => $order
+            ], 200);
+
+        } catch (\Exception $e) {
+
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 200);
+        }
+    }
+
+    public function orderlist(Request $request)
+    {
+        try {
+            /**
+             * ---------------------------------------------------------
+             * Authenticate User via JWT Token
+             * ---------------------------------------------------------
+             */
+            $user = JWTAuth::parseToken()->authenticate();
+
+            if (!$user) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User not found.'
+                ], 200);
+            }
+
+            /**
+             * ---------------------------------------------------------
+             * Initialize Query
+             * ---------------------------------------------------------
+             */
+            $query = Order::query();
+
+            /**
+             * ---------------------------------------------------------
+             * Filter by Status (optional)
+             * Example: ?status=completed
+             * ---------------------------------------------------------
+             */
+            if ($request->filled('status')) {
+                $query->where('status', $request->status);
+            }
+
+            /**
+             * ---------------------------------------------------------
+             * Filter by Date Range (optional)
+             * Example:
+             * ?from_date=2026-04-01&to_date=2026-04-10
+             * ---------------------------------------------------------
+             */
+            if ($request->filled('from_date') && $request->filled('to_date')) {
+                $query->whereBetween('created_at', [
+                    $request->from_date . ' 00:00:00',
+                    $request->to_date . ' 23:59:59'
+                ]);
+            }
+
+            /**
+             * ---------------------------------------------------------
+             * Filter by Single Date (optional)
+             * Example: ?date=2026-04-12
+             * ---------------------------------------------------------
+             */
+            if ($request->filled('date')) {
+                $query->whereDate('created_at', $request->date);
+            }
+
+            /**
+             * ---------------------------------------------------------
+             * Order & Pagination
+             * ---------------------------------------------------------
+             */
+            $orders = $query->orderBy('id', 'desc')->paginate(10);
+
+            /**
+             * ---------------------------------------------------------
+             * Response
+             * ---------------------------------------------------------
+             */
+            return response()->json([
+                'status' => true,
+                'message' => 'Order found successfully.',
+                'data' => $orders
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 200);
+        }
     }
 }

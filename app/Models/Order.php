@@ -22,15 +22,9 @@ class Order extends Model
         'front_photo',
         'side_photo',
         'back_photo',
-        'neck',
-        'chest',
-        'shoulder',
-        'sleeve_length',
-        'waist',
+        'mesurment_json',
         'additional_requirement',
         'category_id',
-        'stitch_master_id',
-        'stitch_status',
         'status',
     ];
 
