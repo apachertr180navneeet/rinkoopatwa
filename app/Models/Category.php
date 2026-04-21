@@ -15,6 +15,7 @@ class Category extends Model
         'status',
         'measurements',
         'youtube_url',
+        'image'
     ];
 
     protected $casts = [

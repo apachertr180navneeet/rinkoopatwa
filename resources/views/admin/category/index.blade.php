@@ -80,6 +80,7 @@
                 <tr>
                     <th>SR No.</th>
                     <th>Name</th>
+                    <th>Image</th>
                     <th>Status</th>
                     <th>Action</th>
                 </tr>
@@ -115,6 +116,11 @@
                             <label class="form-label">YouTube URL (Unlisted)</label>
                             <input type="text" name="youtube_url" id="youtube_url" class="form-control">
                             <small class="text-danger error" id="error_youtube_url"></small>
+                        </div>
+                        <div class="col-md-12 mt-2">
+                            <label>Image</label>
+                            <input type="file" name="image" id="image" class="form-control">
+                            <img id="previewImage" width="80" class="mt-2 d-none"/>
                         </div>
                     </div>
 
@@ -201,6 +207,13 @@
             columns: [
                 { data: 'DT_RowIndex', orderable: false, searchable: false },
                 { data: 'name' },
+                {
+                    data: 'image',
+                    render: function (data) {
+                        if (!data) return '-';
+                        return `<img src="${data}" width="50" height="50" style="object-fit:cover;border-radius:6px;">`;
+                    }
+                },
                 { data: 'status', orderable: false },
                 { data: 'action', orderable: false }
             ],
@@ -224,7 +237,7 @@
         $('#categoryForm').submit(function (e) {
             e.preventDefault();
             clearErrors();
-
+            let formData = new FormData(this);
             let id = $('#category_id').val();
             let url = id ? 'categories/update/' + id : "{{ route('admin.categories.store') }}";
 
@@ -233,7 +246,9 @@
             $.ajax({
                 url: url,
                 type: "POST",
-                data: $(this).serialize(),
+                data: formData,
+                contentType: false,
+                processData: false,
                 success: function () {
                     $('#categoryModal').modal('hide');
                     table.draw();
@@ -272,6 +287,12 @@
                 $('#category_id').val(data.id);
                 $('#name').val(data.name);
                 $('#youtube_url').val(data.youtube_url || '');
+
+                if(data.image){
+                    $('#previewImage').attr('src',data.image).removeClass('d-none');
+                } else {
+                    $('#previewImage').addClass('d-none');
+                }
 
                 measurements = [];
                 if (data.measurements) {

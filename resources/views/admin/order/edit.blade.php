@@ -5,8 +5,8 @@
         <div class="card p-4">
             <h5 class="text-center mb-4">View Order</h5>
 
-            <form>
-
+            <form action="{{ route('admin.orders.update', $order->id) }}" method="POST">
+                @csrf
                 <!-- USER DETAILS -->
                 <div class="row mb-3">
                     <div class="col-md-6">
@@ -152,7 +152,7 @@
                         <!-- Status -->
                         <div class="col-md-4">
                             <label>Status</label>
-                            <select class="form-control">
+                            <select class="form-control status-dropdown" disabled>
                                 <option value="pending"
                                     {{ isset($categorystitch) && $categorystitch->status == 'pending' ? 'selected' : '' }}>
                                     Pending
@@ -176,7 +176,7 @@
                 <div class="row mb-4">
                     <div class="col-md-4">
                         <label>Order Status</label>
-                        <select class="form-control">
+                        <select class="form-control" name="status">
                             <option value="pending">Pending</option>
                             <option value="complete">Complete</option>
                         </select>
@@ -185,9 +185,8 @@
 
                 <!-- BUTTON -->
                 <div class="text-end">
-                    <button type="button" class="btn btn-primary">Notification Send</button>
 
-                    <button type="button" class="btn btn-primary">Send</button>
+                    <button type="submit" id="sendBtn" class="btn btn-primary">Send</button>
                 </div>
 
             </form>
@@ -218,7 +217,6 @@
                     master_id: master_id
                 },
                 success: function(response) {
-                    console.log(response);
                     Swal.fire({
                         icon: 'success',
                         title: response.message || 'Master Assigned Successfully',
@@ -227,7 +225,6 @@
                     });
                 },
                 error: function(xhr) {
-                    console.log(xhr.responseText);
 
                     let msg = 'Something went wrong';
 
@@ -238,6 +235,28 @@
                     toastr.error(msg);
                 }
             });
+
+        });
+
+
+        // ✅ CHECK ONLY ON PAGE LOAD
+        $(document).ready(function() {
+
+            let total = $('.status-dropdown').length;
+            let completeCount = 0;
+
+            $('.status-dropdown').each(function() {
+                if ($(this).val() === 'complete') {
+                    completeCount++;
+                }
+            });
+
+            // ✅ ENABLE only when all complete
+            if (total > 0 && total === completeCount) {
+                $('#sendBtn').prop('disabled', false);
+            } else {
+                $('#sendBtn').prop('disabled', true);
+            }
 
         });
     </script>

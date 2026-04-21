@@ -71,7 +71,8 @@ class AuthController extends Controller
             'phone' => 'required|digits_between:4,13',
             'country_code' => "required|max:5",
             'otp' => "required|max:4",
-            'device_token' => 'nullable',
+            'device_token' => 'nullable|string',
+            'device_type' => 'nullable|in:android,ios',
         ]);
 
         if($validator->fails()) {
@@ -149,11 +150,14 @@ class AuthController extends Controller
             }
 
 
-            if(!empty($data['device_token'])){
+            if (!empty($data['device_token'])) {
                 $user->device_token = $data['device_token'];
             }
 
-            // Save device info
+            if (!empty($data['device_type'])) {
+                $user->device_type = $data['device_type'];
+            }
+
             $user->save();
 
             return response()->json([
@@ -289,6 +293,8 @@ class AuthController extends Controller
             'phone' => "required|numeric|exists:app_users,phone|unique:users,phone",
             'country_code' => "required|numeric|exists:app_users,country_code",
             'otp' => "required|max:4",
+            'device_token' => 'nullable|string',
+            'device_type' => 'nullable|in:android,ios',
         ]);
         if($validator->fails()) {
             return response()->json([
@@ -336,8 +342,8 @@ class AuthController extends Controller
             $user->zipcode = $app_user->zipcode ?? '';
             $user->latitude = $app_user->latitude ?? '';
             $user->longitude = $app_user->longitude ?? '';
-            $user->device_type = $app_user->device_type ?? '';
-            $user->device_token = $app_user->device_token ?? '';
+            $user->device_type = $data['device_type'] ?? $app_user->device_type ?? '';
+            $user->device_token = $data['device_token'] ?? $app_user->device_token ?? '';
             $user->bio = $app_user->bio ?? '';
             $user->phone_verified_at = $date;
             $user->avatar = $app_user->avatar;
@@ -725,20 +731,18 @@ class AuthController extends Controller
              * Convert JSON Fields
              * ---------------------------------------------------------
              */
-            $measurementJson = $request->mesurment_json 
-                ? json_encode($request->mesurment_json) 
-                : null;
-
-            $additionalRequirement = $request->additional_requirement 
-                ? json_encode($request->additional_requirement) 
-                : null;
+            $measurementJson = $request->measurement_json ;
+            
+            $additionalRequirement = $request->additional_requirement;
 
             /**
              * ---------------------------------------------------------
              * Category Handling
              * ---------------------------------------------------------
              */
-            $categoryIds = $request->category_id ;
+            $categoryIds = $request->category_id;
+
+            $commaSeparated = implode(',', $categoryIds);
 
             /**
              * ---------------------------------------------------------
@@ -760,7 +764,7 @@ class AuthController extends Controller
                 'back_photo' => $backPhoto,
                 'mesurment_json' => $measurementJson,
                 'additional_requirement' => $additionalRequirement,
-                'category_id' => $categoryIds,
+                'category_id' => $commaSeparated,
             ]);
 
             /**

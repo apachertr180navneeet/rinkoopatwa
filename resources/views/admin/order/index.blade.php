@@ -60,7 +60,15 @@
                 { data: 'user_name' },
                 { data: 'mobile' },
                 { data: 'email' },
-                { data: 'status' },
+                {
+                    data: 'status',
+                    render: function (data, type, row) {
+                        if (type === 'display') {
+                            return data; // render HTML
+                        }
+                        return data;
+                    }
+                },
                 { data: 'action', orderable: false, searchable: false }
             ],
             order: [[0, 'desc']]

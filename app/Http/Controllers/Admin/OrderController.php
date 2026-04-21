@@ -67,18 +67,20 @@ class OrderController extends Controller
         }
 
         return DataTables::of($query)
-            ->addColumn('action', function ($row) {
-                return '
-                    <a href="' . route('admin.orders.edit', $row->id) . '"  class="btn btn-sm btn-warning">
-                        Edit
-                    </a>
-                ';
-            })
-            ->editColumn('status', function ($row) {
-                return ucfirst($row->status);
-            })
-            ->rawColumns(['action'])
-            ->make(true);
+        ->addColumn('action', function ($row) {
+            return '<a href="' . route('admin.orders.edit', $row->id) . '" class="btn btn-sm btn-warning">Edit</a>';
+        })
+        ->editColumn('status', function ($row) {
+            if ($row->status === 'pending') {
+                return '<span class="badge bg-warning text-dark">Pending</span>';
+            } elseif ($row->status === 'complete') {
+                return '<span class="badge bg-success">Complete</span>';
+            }
+            return '<span class="badge bg-secondary">' . ucfirst($row->status) . '</span>';
+        })
+        ->rawColumns(['status', 'action'])   // ✅ allow HTML
+        ->escapeColumns([])                  // ✅ FORCE disable escaping
+        ->make(true);
     }
 
     public function edit($id)
@@ -96,114 +98,34 @@ class OrderController extends Controller
 
     public function update(Request $request, $id)
     {
-        $order = Order::findOrFail($id);
-
         $validated = $request->validate([
-            'user_name' => 'nullable|string|max:255',
-            'mobile' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:255',
-            'order_no' => 'required|string|max:100|unique:orders,order_no,' . $order->id,
-            'stitch_for_name' => 'nullable|string|max:255',
-            'phone_no' => 'nullable|string|max:20',
-            'height' => 'nullable|string|max:50',
-            'body_weight' => 'nullable|string|max:50',
-            'shoes_size' => 'nullable|string|max:50',
-            'front_photo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-            'side_photo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-            'back_photo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-            'neck' => 'nullable|string|max:50',
-            'chest' => 'nullable|string|max:50',
-            'shoulder' => 'nullable|string|max:50',
-            'sleeve_length' => 'nullable|string|max:50',
-            'waist' => 'nullable|string|max:50',
-            'additional_requirement' => 'nullable|string',
             'status' => 'nullable|in:pending,complete',
-
-            'category_ids' => 'nullable|array',
-            'category_ids.*' => 'nullable|exists:categories,id',
-            'stitch_master_ids' => 'nullable|array',
-            'stitch_master_ids.*' => 'nullable|exists:users,id',
-            'stitch_statuses' => 'nullable|array',
-            'stitch_statuses.*' => 'nullable|in:trial_ready,pending,complete',
         ]);
 
-        $categoryIds = $request->input('category_ids', []);
-        $stitchMasterIds = $request->input('stitch_master_ids', []);
-        $stitchStatuses = $request->input('stitch_statuses', []);
-
-        $selectedCategoryIds = array_values(array_filter($categoryIds, function ($v) {
-            return !empty($v);
-        }));
-
-        $defaultStitchByCategory = [];
-        if (!empty($selectedCategoryIds)) {
-            $categoriesWithStitches = Category::query()
-                ->whereIn('id', $selectedCategoryIds)
-                ->with(['stitches' => function ($q) {
-                    $q->where('role', 'stitch')->select('users.id', 'users.full_name');
-                }])
-                ->get(['id']);
-
-            foreach ($categoriesWithStitches as $cat) {
-                $defaultStitchByCategory[$cat->id] = $cat->stitches->first()?->id;
-            }
-        }
-
-        $assignments = [];
-        foreach ($categoryIds as $i => $categoryId) {
-            if (empty($categoryId)) {
-                continue;
-            }
-
-            $stitchMasterId = $stitchMasterIds[$i] ?? null;
-            if (empty($stitchMasterId)) {
-                $stitchMasterId = $defaultStitchByCategory[$categoryId] ?? null;
-            }
-
-            if (empty($stitchMasterId)) {
-                continue;
-            }
-
-            $assignments[] = [
-                'category_id' => (int) $categoryId,
-                'stitch_master_id' => (int) $stitchMasterId,
-                'stitch_status' => $stitchStatuses[$i] ?? 'pending',
-            ];
-        }
-
         DB::beginTransaction();
+
         try {
-            $this->handlePhotos($request, $validated, $order);
+            $order = Order::findOrFail($id);
 
-            if (!empty($assignments)) {
-                $validated['category_id'] = $assignments[0]['category_id'];
-                $validated['stitch_master_id'] = $assignments[0]['stitch_master_id'];
-                $validated['stitch_status'] = $assignments[0]['stitch_status'];
+            // ✅ Update status
+            if ($request->has('status')) {
+                $order->status = $request->status;
             }
 
-            $order->update($validated);
-
-            $order->categoryStitchItems()->delete();
-
-            foreach ($assignments as $item) {
-                OrderCategoryStitch::create([
-                    'order_id' => $order->id,
-                    'category_id' => $item['category_id'],
-                    'stitch_master_id' => $item['stitch_master_id'],
-                    'stitch_status' => $item['stitch_status'],
-                ]);
-            }
+            $order->save();
 
             DB::commit();
 
-            return response()->json(['success' => true]);
+            // ✅ Redirect to index route
+            return redirect()->route('admin.orders.index')
+                ->with('success', 'Order status updated successfully');
+
         } catch (\Throwable $e) {
             DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update order',
-                'error' => $e->getMessage(),
-            ], 500);
+
+            return redirect()->back()
+                ->with('error', 'Failed to update order')
+                ->withInput();
         }
     }
 

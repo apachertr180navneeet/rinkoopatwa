@@ -30,6 +30,9 @@ class CategoryController extends Controller
 
         return DataTables::of($query)
             ->addIndexColumn()
+            ->addColumn('image', function ($row) {
+                return $row->image;
+            })
             ->addColumn('status', function ($row) {
                 $checked = $row->status === 'active' ? 'checked' : '';
                 return '<label class="switch">
@@ -58,11 +61,22 @@ class CategoryController extends Controller
             'youtube_url' => 'nullable|url',
         ]);
 
+        $imageUrl = null;
+
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            $name = time().'_'.$file->getClientOriginalName();
+            $file->move(public_path('uploads/category'), $name);
+
+            $imageUrl = url('uploads/category/'.$name); // FULL URL
+        }
+
         Category::create([
             'name' => $request->name,
             'status' => $request->status ?? 'active',
             'measurements' => $request->measurements,
             'youtube_url' => $request->youtube_url,
+            'image' => $imageUrl
         ]);
 
         return response()->json(['success' => true]);
@@ -83,11 +97,22 @@ class CategoryController extends Controller
             'youtube_url' => 'nullable|url',
         ]);
 
+        $imageUrl = $category->image;
+
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            $name = time().'_'.$file->getClientOriginalName();
+            $file->move(public_path('uploads/category'), $name);
+
+            $imageUrl = url('uploads/category/'.$name);
+        }
+
         $category->update([
             'name' => $request->name,
             'status' => $request->status ?? $category->status,
             'measurements' => $request->measurements,
             'youtube_url' => $request->youtube_url,
+            'image' => $imageUrl
         ]);
 
         return response()->json([
