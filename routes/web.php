@@ -110,3 +110,5 @@ Route::prefix('admin')->name('admin.')->group(function () {
 Route::middleware(['auth'])->group(function () {
     // Add user routes here
 });
+
+Route::post('/assign-master', [OrderController::class, 'assignMaster'])->name('assign.master');

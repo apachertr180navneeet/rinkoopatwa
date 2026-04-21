@@ -13,6 +13,7 @@ use App\Models\PhoneOtp;
 use App\Models\AppUser;
 use App\Models\Category;
 use App\Models\Order;
+use App\Models\CategoryStitch;
 use Carbon\Carbon;
 
 
@@ -146,5 +147,241 @@ class MasterAuthController extends Controller
             'status' => true,
             'message' => 'User successfully signed out.'
         ),200);
+    }
+
+
+    public function orderlist(Request $request)
+    {
+        try {
+            /**
+             * ---------------------------------------------------------
+             * Authenticate User via JWT Token
+             * ---------------------------------------------------------
+             */
+            $user = JWTAuth::parseToken()->authenticate();
+
+            if (!$user) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User not found.'
+                ], 200);
+            }
+
+            /**
+             * ---------------------------------------------------------
+             * Pagination Setup
+             * ---------------------------------------------------------
+             */
+            $perPage = $request->get('per_page', 10);
+
+            /**
+             * ---------------------------------------------------------
+             * Filters
+             * ---------------------------------------------------------
+             */
+            $search = $request->get('search');   // search text
+            $status = $request->get('status');   // pending, trial-ready, complete
+
+            /**
+             * ---------------------------------------------------------
+             * Query with Joins
+             * ---------------------------------------------------------
+             */
+            $query = CategoryStitch::select(
+                    'category_stitch.*',
+                    'orders.id as order_id',
+                    'orders.order_no',
+                    'orders.user_name',
+                    'orders.mobile',
+                    'orders.email',
+                    'categories.id as category_id',
+                    'categories.name as category_name'
+                )
+                ->join('orders', 'orders.id', '=', 'category_stitch.order_id')
+                ->join('categories', 'categories.id', '=', 'category_stitch.category_id')
+                ->where('category_stitch.stitch_id', $user->id);
+
+            /**
+             * ---------------------------------------------------------
+             * Status Filter
+             * ---------------------------------------------------------
+             */
+            if (!empty($status)) {
+                $query->where('category_stitch.status', $status);
+            }
+
+            /**
+             * ---------------------------------------------------------
+             * Search Filter
+             * ---------------------------------------------------------
+             */
+            if (!empty($search)) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('orders.order_no', 'LIKE', "%$search%")
+                    ->orWhere('orders.user_name', 'LIKE', "%$search%")
+                    ->orWhere('orders.mobile', 'LIKE', "%$search%")
+                    ->orWhere('categories.name', 'LIKE', "%$search%");
+                });
+            }
+
+            /**
+             * ---------------------------------------------------------
+             * Order + Pagination
+             * ---------------------------------------------------------
+             */
+            $orders = $query->orderBy('category_stitch.id', 'desc')
+                            ->paginate($perPage);
+
+            /**
+             * ---------------------------------------------------------
+             * Response
+             * ---------------------------------------------------------
+             */
+            return response()->json([
+                'status' => true,
+                'message' => 'Order found successfully.',
+                'data' => $orders
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 200);
+        }
+    }
+
+    public function orderstatus(Request $request)
+    {
+        try {
+            /**
+             * ---------------------------------------------------------
+             * Authenticate User via JWT Token
+             * ---------------------------------------------------------
+             */
+            $user = JWTAuth::parseToken()->authenticate();
+
+            if (!$user) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User not found.'
+                ], 200);
+            }
+
+            /**
+             * ---------------------------------------------------------
+             * Validation
+             * ---------------------------------------------------------
+             */
+            $request->validate([
+                'id' => 'required|exists:category_stitch,id',
+                'status'   => 'required|string'
+            ]);
+
+            /**
+             * ---------------------------------------------------------
+             * Find Order
+             * ---------------------------------------------------------
+             */
+            $order = CategoryStitch::where('id', $request->id)
+                        ->first();
+
+            if (!$order) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Order not found.'
+                ], 200);
+            }
+
+            /**
+             * ---------------------------------------------------------
+             * Update Status
+             * ---------------------------------------------------------
+             */
+            $order->status = $request->status;
+            $order->save();
+
+            /**
+             * ---------------------------------------------------------
+             * Response
+             * ---------------------------------------------------------
+             */
+            return response()->json([
+                'status' => true,
+                'message' => 'Order status updated successfully.',
+                'data' => $order
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 200);
+        }
+    }
+
+    public function orderdetail($id)
+    {
+        try {
+            /**
+             * ---------------------------------------------------------
+             * Authenticate User via JWT Token
+             * ---------------------------------------------------------
+             */
+            $user = JWTAuth::parseToken()->authenticate();
+
+            if (!$user) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User not found.'
+                ], 200);
+            }
+
+            /**
+             * ---------------------------------------------------------
+             * Find Order
+             * ---------------------------------------------------------
+             */
+           /**
+             * ---------------------------------------------------------
+             * Query with Joins
+             * ---------------------------------------------------------
+             */
+            $query = CategoryStitch::select(
+                    'category_stitch.*',
+                    'orders.id as order_id',
+                    'orders.*',
+                    'categories.id as category_id',
+                    'categories.name as category_name'
+                )
+                ->join('orders', 'orders.id', '=', 'category_stitch.order_id')
+                ->join('categories', 'categories.id', '=', 'category_stitch.category_id')
+                ->where('category_stitch.id', $id);
+
+            /**
+             * ---------------------------------------------------------
+             * Order + Pagination
+             * ---------------------------------------------------------
+             */
+            $orders = $query->orderBy('category_stitch.id', 'desc')
+                            ->first();
+
+            /**
+             * ---------------------------------------------------------
+             * Response
+             * ---------------------------------------------------------
+             */
+            return response()->json([
+                'status' => true,
+                'message' => 'Order found successfully.',
+                'data' => $orders
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 200);
+        }
     }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\User;
+use App\Models\CategoryStitch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -204,5 +205,29 @@ class OrderController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function assignMaster(Request $request)
+    {
+        $request->validate([
+            'order_id' => 'required',
+            'category_id' => 'required',
+            'master_id' => 'required',
+        ]);
+
+        CategoryStitch::updateOrCreate(
+            [
+                'order_id' => $request->order_id,
+                'category_id' => $request->category_id,
+            ],
+            [
+                'stitch_id' => $request->master_id,
+            ]
+        );
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Master Assigned Successfully'
+        ]);
     }
 }

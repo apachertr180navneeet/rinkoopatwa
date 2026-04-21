@@ -50,5 +50,8 @@ Route::group(['prefix'=>'master-auth'], function(){
 
 Route::middleware('jwt.verify')->group(function() {
     Route::get('master/user', [MasterAuthController::class, 'getMaster']);    
-    Route::post('/logout', [MasterAuthController::class, 'logout']);
+    Route::post('master/logout', [MasterAuthController::class, 'logout']);
+    Route::get('master/orderlist', [MasterAuthController::class, 'orderlist']);
+    Route::post('master/order/status', [MasterAuthController::class, 'orderstatus']);
+    Route::get('master/order/{id}', [MasterAuthController::class, 'orderdetail']);
 });

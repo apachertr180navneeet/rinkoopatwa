@@ -60,9 +60,8 @@
                 <div class="row text-center mb-4">
                     <div class="col-md-4">
                         <label>Front Photo</label><br>
-                        @if(!empty($order->front_photo))
-                            <img src="{{ $order->front_photo }}" 
-                                class="img-fluid rounded border" 
+                        @if (!empty($order->front_photo))
+                            <img src="{{ $order->front_photo }}" class="img-fluid rounded border"
                                 style="height:150px; object-fit:cover;">
                         @else
                             <p class="text-muted">No Image</p>
@@ -71,9 +70,8 @@
 
                     <div class="col-md-4">
                         <label>Side Photo</label><br>
-                        @if(!empty($order->side_photo))
-                            <img src="{{ $order->side_photo }}" 
-                                class="img-fluid rounded border" 
+                        @if (!empty($order->side_photo))
+                            <img src="{{ $order->side_photo }}" class="img-fluid rounded border"
                                 style="height:150px; object-fit:cover;">
                         @else
                             <p class="text-muted">No Image</p>
@@ -82,9 +80,8 @@
 
                     <div class="col-md-4">
                         <label>Back Photo</label><br>
-                        @if(!empty($order->back_photo))
-                            <img src="{{ $order->back_photo }}" 
-                                class="img-fluid rounded border" 
+                        @if (!empty($order->back_photo))
+                            <img src="{{ $order->back_photo }}" class="img-fluid rounded border"
                                 style="height:150px; object-fit:cover;">
                         @else
                             <p class="text-muted">No Image</p>
@@ -100,11 +97,10 @@
                 @endphp
 
                 <div class="row mb-3">
-                    @foreach($measurements as $key => $measurement)
+                    @foreach ($measurements as $key => $measurement)
                         <div class="col-md-6">
                             <label>{{ $key }}</label>
-                            <input type="text" class="form-control" 
-                                value="{{ $measurement }} inch" readonly>
+                            <input type="text" class="form-control" value="{{ $measurement }} inch" readonly>
                         </div>
                     @endforeach
                 </div>
@@ -115,7 +111,7 @@
                     $additionals = json_decode($order->additional_requirement, true);
                 @endphp
                 <div class="row mb-3">
-                    @foreach($additionals as $additionalkey => $additional)
+                    @foreach ($additionals as $additionalkey => $additional)
                         <div class="col-md-6">
                             <label>{{ ucfirst($additionalkey) }}</label>
                             <input type="text" class="form-control" value="{{ $additional }} Buttons" readonly>
@@ -123,29 +119,54 @@
                     @endforeach
                 </div>
 
-                @foreach ( $categories as $category )
-                    <!-- CATEGORY -->
+                @foreach ($categories as $category)
+                    @php
+                        $categorystitch = DB::table('category_stitch')
+                            ->where('order_id', $order->id)
+                            ->where('category_id', $category->id)
+                            ->first();
+                    @endphp
+
                     <div class="row mb-3">
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label>Category</label>
+                            <input type="hidden" name="orderid" value="{{ $order->id }}">
                             <input type="hidden" name="categoryid" value="{{ $category->id }}">
                             <input type="text" class="form-control" value="{{ $category->name }}" readonly>
                         </div>
-                        <div class="col-md-3">
+
+                        <!-- Stitch Master -->
+                        <div class="col-md-4">
                             <label>Assign Stitch Master</label>
-                            <select class="form-control">
-                                <option>Select Stitch Master</option>
-                                @foreach($masters as $key => $master)
-                                    <option value="{{ $master->id }}">{{ $master->full_name }}</option>
+                            <select class="form-control assign-master">
+                                <option value="">Select Stitch Master</option>
+                                @foreach ($masters as $master)
+                                    <option value="{{ $master->id }}"
+                                        {{ isset($categorystitch) && $categorystitch->stitch_id == $master->id ? 'selected' : '' }}>
+                                        {{ $master->full_name }}
+                                    </option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-3">
+
+                        <!-- Status -->
+                        <div class="col-md-4">
                             <label>Status</label>
                             <select class="form-control">
-                                <option value="pending">Pending</option>
-                                <option value="trial-ready">Trial Ready</option>
-                                <option value="complete">Complete</option>
+                                <option value="pending"
+                                    {{ isset($categorystitch) && $categorystitch->status == 'pending' ? 'selected' : '' }}>
+                                    Pending
+                                </option>
+
+                                <option value="trial-ready"
+                                    {{ isset($categorystitch) && $categorystitch->status == 'trial-ready' ? 'selected' : '' }}>
+                                    Trial Ready
+                                </option>
+
+                                <option value="complete"
+                                    {{ isset($categorystitch) && $categorystitch->status == 'complete' ? 'selected' : '' }}>
+                                    Complete
+                                </option>
                             </select>
                         </div>
                     </div>
@@ -172,4 +193,52 @@
             </form>
         </div>
     </div>
+@endsection
+
+
+@section('script')
+    <script>
+        $(document).on('change', '.assign-master', function() {
+
+            let row = $(this).closest('.row');
+
+            let order_id = row.find('input[name="orderid"]').val();
+            let category_id = row.find('input[name="categoryid"]').val();
+            let master_id = $(this).val();
+
+            if (master_id == '') return;
+
+            $.ajax({
+                url: "{{ route('assign.master') }}",
+                type: "POST",
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    order_id: order_id,
+                    category_id: category_id,
+                    master_id: master_id
+                },
+                success: function(response) {
+                    console.log(response);
+                    Swal.fire({
+                        icon: 'success',
+                        title: response.message || 'Master Assigned Successfully',
+                        timer: 1200,
+                        showConfirmButton: false
+                    });
+                },
+                error: function(xhr) {
+                    console.log(xhr.responseText);
+
+                    let msg = 'Something went wrong';
+
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        msg = xhr.responseJSON.message;
+                    }
+
+                    toastr.error(msg);
+                }
+            });
+
+        });
+    </script>
 @endsection
