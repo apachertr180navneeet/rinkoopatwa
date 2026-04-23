@@ -39,6 +39,8 @@ Route::middleware('jwt.verify')->group(function() {
     Route::post('/categorydetail', [AuthController::class, 'getCategoryDetail']);
     Route::post('/createorder', [AuthController::class, 'orderCreate']);
     Route::get('/orderlist', [AuthController::class, 'orderlist']);
+    Route::get('/orderdetail/{id}', [AuthController::class, 'orderDetail']);
+    Route::get('/order/pdf/{id}', [AuthController::class, 'downloadPdf']);
     
 });
 
@@ -55,3 +57,5 @@ Route::middleware('jwt.verify')->group(function() {
     Route::post('master/order/status', [MasterAuthController::class, 'orderstatus']);
     Route::get('master/order/{id}', [MasterAuthController::class, 'orderdetail']);
 });
+
+Route::get('/order/pdf/stream/{id}', [AuthController::class, 'streamPdf'])->name('order.pdf.stream');

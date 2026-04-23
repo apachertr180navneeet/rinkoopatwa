@@ -14,6 +14,7 @@ use App\Models\AppUser;
 use App\Models\Category;
 use App\Models\Order;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 
 
@@ -751,6 +752,7 @@ class AuthController extends Controller
              */
             $order = Order::create([
                 'order_no' => $orderNo,
+                'user_id' => $user->id,
                 'user_name' => $user->full_name ?? null,
                 'mobile' => $user->phone ?? null,
                 'email' => $user->email ?? null,
@@ -811,6 +813,8 @@ class AuthController extends Controller
              */
             $query = Order::query();
 
+            $query->where('user_id',$user->id);
+
             /**
              * ---------------------------------------------------------
              * Filter by Status (optional)
@@ -862,6 +866,144 @@ class AuthController extends Controller
                 'message' => 'Order found successfully.',
                 'data' => $orders
             ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 200);
+        }
+    }
+
+    public function orderDetail($id)
+    {
+        try {
+            /**
+             * ---------------------------------------------------------
+             * Authenticate User via JWT Token
+             * ---------------------------------------------------------
+             */
+            $user = JWTAuth::parseToken()->authenticate();
+
+            if (!$user) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User not found.'
+                ], 200);
+            }
+
+            /**
+             * ---------------------------------------------------------
+             * Fetch Order with Relations
+             * ---------------------------------------------------------
+             */
+            $order = Order::where('id', $id)
+            ->where('user_id', $user->id)
+            ->first();
+
+            /**
+             * ---------------------------------------------------------
+             * Check Order Exists
+             * ---------------------------------------------------------
+             */
+            if (!$order) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Order not found.'
+                ], 200);
+            }
+
+            /**
+             * ---------------------------------------------------------
+             * Response
+             * ---------------------------------------------------------
+             */
+            return response()->json([
+                'status' => true,
+                'message' => 'Order detail fetched successfully.',
+                'data' => $order
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 200);
+        }
+    }
+
+    public function downloadPdf($id)
+    {
+        try {
+
+            $user = JWTAuth::parseToken()->authenticate();
+
+            if (!$user) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User not found.'
+                ], 200);
+            }
+
+            $order = Order::where('id', $id)
+                ->where('user_id', $user->id)
+                ->first();
+
+
+            if (!$order) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Order not found.'
+                ], 200);
+            }
+
+            /**
+             * ---------------------------------
+             * Generate PDF URL (NOT download)
+             * ---------------------------------
+             */
+            $pdfUrl = route('order.pdf.stream', ['id' => $order->id]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'PDF URL generated successfully.',
+                'pdf_url' => $pdfUrl
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 200);
+        }
+    }
+
+
+    public function streamPdf($id)
+    {
+        try {
+
+            $order = Order::where('id', $id)
+                ->first();
+
+            if (!$order) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Order not found.'
+                ], 200);
+            }
+
+            // ✅ Decode JSON
+            $order->measurements = json_decode($order->mesurment_json, true) ?? [];
+            $order->additional = json_decode($order->additional_requirement, true) ?? [];
+            
+            // ✅ Important for images
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::setOptions([
+                'isRemoteEnabled' => true,
+                'isHtml5ParserEnabled' => true
+            ])->loadView('pdf.order', compact('order'));
+
+            return $pdf->stream('order_'.$order->id.'.pdf');
 
         } catch (\Exception $e) {
             return response()->json([
