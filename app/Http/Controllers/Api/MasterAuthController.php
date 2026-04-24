@@ -31,8 +31,8 @@ class MasterAuthController extends Controller
         $validator = Validator::make($data, [
             'phone' => 'required|numeric',
             'password' => 'required',
-            'device_type' => 'required|in:ios,android',
-            'device_token' => 'required',
+            'device_type' => 'nullable|in:ios,android',
+            'device_token' => 'nullable',
         ]);
 
         if ($validator->fails()) {
@@ -86,8 +86,8 @@ class MasterAuthController extends Controller
             // -------------------------------
             // Update Device Info
             // -------------------------------
-            $user->device_type = $data['device_type'];
-            $user->device_token = $data['device_token'];
+            $user->device_type = $data['device_type'] ?? 'ios';
+            $user->device_token = $data['device_token'] ?? null;
             $user->save();
 
             // -------------------------------
