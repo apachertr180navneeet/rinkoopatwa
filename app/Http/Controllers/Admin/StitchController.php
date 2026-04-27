@@ -70,7 +70,9 @@ class StitchController extends Controller
         $request->validate([
             'name'  => 'required',
             'mobile' => 'required|digits:10',
-            'email' => 'required|email|unique:users,email',
+            'email' => 'required|email|unique:users,email',
+
+            'password' => 'required|min:6',
         ]);
 
         User::create([
