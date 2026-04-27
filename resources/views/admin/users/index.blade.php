@@ -1,276 +1,585 @@
 @extends('admin.layouts.app')
 
+
+
 @section('style')
-<style>
-.switch { position: relative; display: inline-block; width: 45px; height: 22px; }
-.switch input { opacity: 0; width: 0; height: 0; }
-.slider {
-    position: absolute; cursor: pointer;
-    background-color: #d9dee3;
-    border-radius: 30px;
-    top: 0; left: 0; right: 0; bottom: 0;
-}
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 16px; width: 16px;
-    left: 3px; bottom: 3px;
-    background: white;
-    border-radius: 50%;
-    transition: .3s;
-}
-input:checked + .slider { background-color: #696cff; }
-input:checked + .slider:before { transform: translateX(22px); }
-</style>
+    <style>
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 45px;
+            height: 22px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+
+            position: absolute;
+            cursor: pointer;
+
+            background-color: #d9dee3;
+
+            border-radius: 30px;
+
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+
+        }
+
+        .slider:before {
+
+            position: absolute;
+
+            content: "";
+
+            height: 16px;
+            width: 16px;
+
+            left: 3px;
+            bottom: 3px;
+
+            background: white;
+
+            border-radius: 50%;
+
+            transition: .3s;
+
+        }
+
+        input:checked+.slider {
+            background-color: #696cff;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(22px);
+        }
+    </style>
 @endsection
+
+
 
 @section('content')
+    <div class="container-fluid py-4">
 
-<div class="container-fluid py-4">
 
-<div class="card p-3">
 
-    <div class="d-flex justify-content-between mb-3">
-        <h5>User Management</h5>
+        <div class="card p-3">
 
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#userModal">
-            Add User
-        </button>
-    </div>
 
-    <div class="d-flex gap-2 mb-3">
-        <input type="text" id="userName" class="form-control" placeholder="User Name">
-        <input type="text" id="globalSearch" class="form-control" placeholder="Search">
-    </div>
 
-    <table class="table table-bordered" id="userTable">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Mobile</th>
-                <th>Email</th>
-                <th>Location</th>
-                <th>Status</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-    </table>
+            <div class="d-flex justify-content-between mb-3">
 
-</div>
-</div>
+                <h5>User Management</h5>
 
-<!-- MODAL -->
-<!-- MODAL -->
-<div class="modal fade" id="userModal">
-    <div class="modal-dialog">
-        <form id="userForm">
-            @csrf
-            <input type="hidden" id="user_id">
 
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 id="modalTitle">User Form</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
 
-                <div class="modal-body">
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#userModal">
 
-                    <input type="text" name="name" id="name" class="form-control mb-1" placeholder="Name">
-                    <small class="text-danger error" id="error_name"></small>
+                    Add User
 
-                    <input type="text" name="mobile" id="mobile" class="form-control mb-1" placeholder="Mobile">
-                    <small class="text-danger error" id="error_mobile"></small>
+                </button>
 
-                    <input type="email" name="email" id="email" class="form-control mb-1" placeholder="Email">
-                    <small class="text-danger error" id="error_email"></small>
-
-                    <input type="text" name="city" id="city" class="form-control mb-1" placeholder="Location">
-                    <small class="text-danger error" id="error_city"></small>
-
-                </div>
-
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary" id="saveBtn">Save</button>
-                </div>
             </div>
 
-        </form>
-    </div>
-</div>
 
+
+            <div class="d-flex gap-2 mb-3">
+
+                <input type="text" id="userName" class="form-control" placeholder="User Name">
+
+                <input type="text" id="globalSearch" class="form-control" placeholder="Search">
+
+            </div>
+
+
+
+            <table class="table table-bordered" id="userTable">
+
+                <thead>
+
+                    <tr>
+
+                        <th>#</th>
+
+                        <th>Name</th>
+
+                        <th>Mobile</th>
+
+                        <th>Email</th>
+
+                        <th>Location</th>
+
+                        <th>Status</th>
+
+                        <th>Action</th>
+
+                    </tr>
+
+                </thead>
+
+            </table>
+
+
+
+        </div>
+
+    </div>
+
+
+
+    <!-- MODAL -->
+
+    <!-- MODAL -->
+
+    <div class="modal fade" id="userModal">
+
+        <div class="modal-dialog">
+
+            <form id="userForm">
+
+                @csrf
+
+                <input type="hidden" id="user_id">
+
+
+
+                <div class="modal-content">
+
+                    <div class="modal-header">
+
+                        <h5 id="modalTitle">User Form</h5>
+
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
+                    </div>
+
+
+
+                    <div class="modal-body">
+
+
+
+                        <input type="text" name="name" id="name" class="form-control mb-1" placeholder="Name">
+
+                        <small class="text-danger error" id="error_name"></small>
+
+
+
+                        <input type="text" name="mobile" id="mobile" class="form-control mb-1" placeholder="Mobile">
+
+                        <small class="text-danger error" id="error_mobile"></small>
+
+
+
+                        <input type="email" name="email" id="email" class="form-control mb-1" placeholder="Email">
+
+                        <small class="text-danger error" id="error_email"></small>
+
+
+
+                        <input type="text" name="city" id="city" class="form-control mb-1"
+                            placeholder="Location">
+
+                        <small class="text-danger error" id="error_city"></small>
+
+
+
+                    </div>
+
+
+
+                    <div class="modal-footer">
+
+                        <button type="submit" class="btn btn-primary" id="saveBtn">Save</button>
+
+                    </div>
+
+                </div>
+
+
+
+            </form>
+
+        </div>
+
+    </div>
 @endsection
 
+
+
 @section('script')
+    <script>
+        $(function() {
 
 
-<script>
-$(function () {
 
-    let table = $('#userTable').DataTable({
-        processing: true,
-        serverSide: true,
-        ajax: {
-            url: "{{ route('admin.users.getall') }}",
-            data: function (d) {
-                d.name = $('#userName').val();
-                d.search_value = $('#globalSearch').val();
-            }
-        },
-        columns: [
-            { data: 'DT_RowIndex', orderable:false, searchable:false },
-            { data: 'full_name' },
-            { data: 'phone' },
-            { data: 'email' },
-            { data: 'city' },
-            { data: 'status', orderable:false },
-            { data: 'action', orderable:false }
-        ],
-        order: [[1,'asc']]
-    });
+            let table = $('#userTable').DataTable({
 
-    $('#userName, #globalSearch').keyup(function(){
-        table.draw();
-    });
+                processing: true,
 
-    // CLEAR ERRORS
-    function clearErrors(){
-        $('.error').text('');
-        $('.form-control').removeClass('is-invalid');
-    }
+                serverSide: true,
 
-    // SAVE
-    $('#userForm').submit(function(e){
-        e.preventDefault();
+                ajax: {
 
-        clearErrors();
+                    url: "{{ route('admin.users.getall') }}",
 
-        let id = $('#user_id').val();
-        let url = id ? 'users/update/'+id : "{{ route('admin.users.store') }}";
+                    data: function(d) {
 
-        $('#saveBtn').prop('disabled', true).text('Saving...');
+                        d.name = $('#userName').val();
 
-        $.ajax({
-            url: url,
-            type: "POST",
-            data: $(this).serialize(),
+                        d.search_value = $('#globalSearch').val();
 
-            success: function(res){
-                $('#userModal').modal('hide');
+                    }
+
+                },
+
+                columns: [
+
+                    {
+                        data: 'DT_RowIndex',
+                        orderable: false,
+                        searchable: false
+                    },
+
+                    {
+                        data: 'full_name'
+                    },
+
+                    {
+                        data: 'phone'
+                    },
+
+                    {
+                        data: 'email'
+                    },
+
+                    {
+                        data: 'city'
+                    },
+
+                    {
+                        data: 'status',
+                        orderable: false
+                    },
+
+                    {
+                        data: 'action',
+                        orderable: false
+                    }
+
+                ],
+
+                order: [
+                    [1, 'asc']
+                ]
+
+            });
+
+
+
+            $('#userName, #globalSearch').keyup(function() {
+
                 table.draw();
+
+            });
+
+
+
+            // CLEAR ERRORS
+
+            function clearErrors() {
+
+                $('.error').text('');
+
+                $('.form-control').removeClass('is-invalid');
+
+            }
+
+            $('#userModal').on('hidden.bs.modal', function() {
+
                 $('#userForm')[0].reset();
 
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success',
-                    text: 'User saved successfully',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-            },
+                $('#user_id').val('');
 
-            error: function(xhr){
-                let errors = xhr.responseJSON.errors;
+                clearErrors();
 
-                $.each(errors, function(key, value){
-                    $('#error_' + key).text(value[0]);
-                    $('#' + key).addClass('is-invalid');
-                });
-            },
-
-            complete: function(){
                 $('#saveBtn').prop('disabled', false).text('Save');
-            }
-        });
-    });
 
-    // EDIT
-    $(document).on('click','.editBtn',function(){
-        clearErrors();
+            });
 
-        let id = $(this).data('id');
 
-        $.get('users/edit/'+id, function(data){
-            $('#user_id').val(data.id);
-            $('#name').val(data.full_name);
-            $('#mobile').val(data.phone);
-            $('#email').val(data.email);
-            $('#city').val(data.city);
 
-            $('#userModal').modal('show');
-        });
-    });
+            // SAVE
 
-    // DELETE
-    $(document).on('click','.deleteBtn',function(){
-        let id = $(this).data('id');
+            $('#userForm').submit(function(e) {
 
-        Swal.fire({
-            title: 'Are you sure?',
-            text: "You want to delete this user",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Yes'
-        }).then((result) => {
+                e.preventDefault();
 
-            if (result.isConfirmed) {
+
+
+                clearErrors();
+
+
+
+                let id = $('#user_id').val();
+
+                let url = id ? 'users/update/' + id : "{{ route('admin.users.store') }}";
+
+
+
+                $('#saveBtn').prop('disabled', true).text('Saving...');
+
+
 
                 $.ajax({
-                    url:'users/delete/'+id,
-                    type:'DELETE',
-                    data:{_token:'{{ csrf_token() }}'},
 
-                    success:function(){
+                    url: url,
+
+                    type: "POST",
+
+                    data: $(this).serialize(),
+
+
+
+                    success: function(res) {
+
+                        $('#userModal').modal('hide');
+
                         table.draw();
 
+                        $('#userForm')[0].reset();
+
+
+
                         Swal.fire({
+
                             icon: 'success',
-                            title: 'Deleted!',
-                            timer: 1200,
+
+                            title: 'Success',
+
+                            text: 'User saved successfully',
+
+                            timer: 1500,
+
                             showConfirmButton: false
+
                         });
+
+                    },
+
+
+
+                    error: function(xhr) {
+
+                        let errors = xhr.responseJSON.errors;
+
+
+
+                        $.each(errors, function(key, value) {
+
+                            $('#error_' + key).text(value[0]);
+
+                            $('#' + key).addClass('is-invalid');
+
+                        });
+
+                    },
+
+
+
+                    complete: function() {
+
+                        $('#saveBtn').prop('disabled', false).text('Save');
+
                     }
-                });
-            }
-        });
-    });
 
-    // STATUS
-    $(document).on('change','.statusToggle',function(){
-        let id = $(this).data('id');
-        let checkbox = $(this);
-
-        Swal.fire({
-            title: 'Change Status?',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Yes'
-        }).then((result) => {
-
-            if(result.isConfirmed){
-
-                $.post("{{ route('admin.users.status') }}", {
-                    _token:'{{ csrf_token() }}',
-                    id:id
-                }, function(){
-
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Updated!',
-                        timer: 1200,
-                        showConfirmButton: false
-                    });
-
-                    table.draw();
                 });
 
-            } else {
-                checkbox.prop('checked', !checkbox.prop('checked'));
-            }
+            });
+
+
+
+            // EDIT
+
+            $(document).on('click', '.editBtn', function() {
+
+                clearErrors();
+
+
+
+                let id = $(this).data('id');
+
+
+
+                $.get('users/edit/' + id, function(data) {
+
+                    $('#user_id').val(data.id);
+
+                    $('#name').val(data.full_name);
+
+                    $('#mobile').val(data.phone);
+
+                    $('#email').val(data.email);
+
+                    $('#city').val(data.city);
+
+
+
+                    $('#userModal').modal('show');
+
+                });
+
+            });
+
+
+
+            // DELETE
+
+            $(document).on('click', '.deleteBtn', function() {
+
+                let id = $(this).data('id');
+
+
+
+                Swal.fire({
+
+                    title: 'Are you sure?',
+
+                    text: "You want to delete this user",
+
+                    icon: 'warning',
+
+                    showCancelButton: true,
+
+                    confirmButtonText: 'Yes'
+
+                }).then((result) => {
+
+
+
+                    if (result.isConfirmed) {
+
+
+
+                        $.ajax({
+
+                            url: 'users/delete/' + id,
+
+                            type: 'DELETE',
+
+                            data: {
+                                _token: '{{ csrf_token() }}'
+                            },
+
+
+
+                            success: function() {
+
+                                table.draw();
+
+
+
+                                Swal.fire({
+
+                                    icon: 'success',
+
+                                    title: 'Deleted!',
+
+                                    timer: 1200,
+
+                                    showConfirmButton: false
+
+                                });
+
+                            }
+
+                        });
+
+                    }
+
+                });
+
+            });
+
+
+
+            // STATUS
+
+            $(document).on('change', '.statusToggle', function() {
+
+                let id = $(this).data('id');
+
+                let checkbox = $(this);
+
+
+
+                Swal.fire({
+
+                    title: 'Change Status?',
+
+                    icon: 'question',
+
+                    showCancelButton: true,
+
+                    confirmButtonText: 'Yes'
+
+                }).then((result) => {
+
+
+
+                    if (result.isConfirmed) {
+
+
+
+                        $.post("{{ route('admin.users.status') }}", {
+
+                            _token: '{{ csrf_token() }}',
+
+                            id: id
+
+                        }, function() {
+
+
+
+                            Swal.fire({
+
+                                icon: 'success',
+
+                                title: 'Updated!',
+
+                                timer: 1200,
+
+                                showConfirmButton: false
+
+                            });
+
+
+
+                            table.draw();
+
+                        });
+
+
+
+                    } else {
+
+                        checkbox.prop('checked', !checkbox.prop('checked'));
+
+                    }
+
+                });
+
+            });
+
+
+
         });
-    });
-
-});
-</script>
-
+    </script>
 @endsection

@@ -87,7 +87,7 @@ class OrderController extends Controller
     {
         $order = Order::findOrFail($id);
 
-        $masters = User::query()->where('role','stitch')->whereNull('deleted_at')->get();
+        $masters = User::query()->where('role','stitch')->where('status','active')->whereNull('deleted_at')->get();
 
         $categoryIds = explode(',', $order->category_id);
 
