@@ -36,6 +36,18 @@ class AuthController extends Controller
             ], 200);
         }
 
+        // ✅ Check if user exists
+        $user = User::where('phone', $data['phone'])
+                    ->where('country_code', $data['country_code'])
+                    ->first();
+
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'User not found with this phone number. Please register first.',
+            ], 200);
+        }
+
         // For testing: fixed OTP (change to rand(1000,9999) in production)
         $code = rand(1000,9999);
         //$code = '1234';
@@ -898,8 +910,8 @@ class AuthController extends Controller
              * ---------------------------------------------------------
              */
             $order = Order::where('id', $id)
-            ->where('user_id', $user->id)
-            ->first();
+                ->where('user_id', $user->id)
+                ->first();
 
             /**
              * ---------------------------------------------------------
@@ -915,13 +927,28 @@ class AuthController extends Controller
 
             /**
              * ---------------------------------------------------------
+             * Fetch Category Names
+             * ---------------------------------------------------------
+             */
+            $categoryNames = '';
+            if (!empty($order->category_id)) {
+                $categoryIds = array_filter(array_map('trim', explode(',', $order->category_id)));
+                $namesArray = \App\Models\Category::whereIn('id', $categoryIds)->pluck('name')->toArray();
+                $categoryNames = implode(', ', $namesArray);
+            }
+
+            /**
+             * ---------------------------------------------------------
              * Response
              * ---------------------------------------------------------
              */
+            $orderData = $order->toArray();
+            $orderData['category_names'] = $categoryNames;
+
             return response()->json([
                 'status' => true,
                 'message' => 'Order detail fetched successfully.',
-                'data' => $order
+                'data' => $orderData
             ], 200);
 
         } catch (\Exception $e) {
