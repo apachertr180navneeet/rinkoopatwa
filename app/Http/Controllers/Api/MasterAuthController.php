@@ -733,7 +733,8 @@ class MasterAuthController extends Controller
                 'orders.additional_requirement',
 
                 'categories.id as category_id',
-                'categories.name as category_name'
+                'categories.name as category_name',
+                'categories.measurements as category_measurements'
             )
             ->join('orders', 'orders.id', '=', 'category_stitch.order_id')
             ->join('categories', 'categories.id', '=', 'category_stitch.category_id')
@@ -755,6 +756,53 @@ class MasterAuthController extends Controller
 
                             ->first();
 
+
+
+            if ($orders) {
+
+                // Get allowed measurements for this category
+
+                $allowedMeasurements = !empty($orders->category_measurements) 
+
+                    ? array_map('trim', explode(',', $orders->category_measurements)) 
+
+                    : [];
+
+                
+
+                // Decode existing measurements
+
+                $allMeasurements = json_decode($orders->mesurment_json, true) ?: [];
+
+                $filteredMeasurements = [];
+
+                
+
+                // Keep only measurements that belong to the category
+
+                if (is_array($allMeasurements)) {
+
+                    foreach ($allMeasurements as $key => $value) {
+
+                        if (in_array($key, $allowedMeasurements)) {
+
+                            $filteredMeasurements[$key] = $value;
+
+                        }
+
+                    }
+
+                }
+
+                
+
+                // Update with filtered measurements
+
+                $orders->mesurment_json = json_encode($filteredMeasurements);
+
+                unset($orders->category_measurements); // Remove temporary field
+
+            }
 
 
             /**
