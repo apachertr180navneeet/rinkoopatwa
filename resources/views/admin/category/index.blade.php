@@ -117,10 +117,32 @@
                             <input type="text" name="youtube_url" id="youtube_url" class="form-control">
                             <small class="text-danger error" id="error_youtube_url"></small>
                         </div>
-                        <div class="col-md-12 mt-2">
-                            <label>Image</label>
-                            <input type="file" name="image" id="image" class="form-control">
-                            <img id="previewImage" width="80" class="mt-2 d-none"/>
+                        <div class="col-md-12 mt-3">
+                            <div class="card shadow-sm p-3">
+                                <label class="form-label fw-bold">Upload Image</label>
+                        
+                                <!-- File Input -->
+                                <input type="file" name="image" id="image" class="form-control">
+                        
+                                <!-- Image Preview -->
+                                <div class="mt-3 text-center">
+                                    <img id="previewImage" src="#" alt="Preview"
+                                        class="img-thumbnail d-none"
+                                        style="max-width:120px;">
+                                </div>
+                        
+                                <!-- Guidelines -->
+                                <div class="mt-3 p-2 bg-light border rounded">
+                                    <small class="text-muted fw-semibold">📌 Image Guidelines</small>
+                                    <ul class="mb-0 small text-muted">
+                                        <li>Width: <b>320px - 400px</b></li>
+                                        <li>Height: <b>380px - 450px</b></li>
+                                        <li>Aspect Ratio: <b>4:5 (Portrait)</b></li>
+                                        <li>Format: JPG, PNG</li>
+                                        <li>Max Size: 2MB</li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

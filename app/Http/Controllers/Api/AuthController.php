@@ -15,6 +15,7 @@ use App\Models\Category;
 use App\Models\Order;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Http;
 
 
 
@@ -69,6 +70,19 @@ class AuthController extends Controller
         $phone_user->otp = $code;
         $phone_user->otp_expire_time = $futureDate;
         $phone_user->save();
+
+        // ✅ Prepare WhatsApp Message
+        $fullPhone = $data['country_code'] . $data['phone'];
+
+        $message = "Your OTP is $code. It will expire in 2 minutes.";
+
+        // ✅ Send WhatsApp API Request
+        $response = Http::get('https://wywspl.com/sendMessage.php', [
+            'AUTH_KEY'   => 'SYSPOLYSALES',
+            'instance_id'=> '408684',
+            'message'    => $message,
+            'phone'      => $fullPhone,
+        ]);
 
         return response()->json([
             'status' => true,
@@ -270,6 +284,19 @@ class AuthController extends Controller
              * ---------------------------------------------------------
              */
             DB::commit();
+
+            // ✅ Prepare WhatsApp Message
+            $fullPhone = $request->country_code . $request->phone;
+
+            $message = "Your OTP is $otp. It will expire in 2 minutes.";
+
+            // ✅ Send WhatsApp API Request
+            $response = Http::get('https://wywspl.com/sendMessage.php', [
+                'AUTH_KEY'   => 'SYSPOLYSALES',
+                'instance_id'=> '408684',
+                'message'    => $message,
+                'phone'      => $fullPhone,
+            ]);
 
             /**
              * ---------------------------------------------------------
