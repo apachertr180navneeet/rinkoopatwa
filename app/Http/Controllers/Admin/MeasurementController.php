@@ -3,21 +3,20 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Category;
 use App\Models\Measurement;
 use Illuminate\Http\Request;
 use Yajra\DataTables\Facades\DataTables;
 
-class CategoryController extends Controller
+class MeasurementController extends Controller
 {
     public function index()
     {
-        return view('admin.category.index');
+        return view('admin.measurement.index');
     }
 
     public function getAll(Request $request)
     {
-        $query = Category::query()->whereNull('deleted_at');
+        $query = Measurement::query()->whereNull('deleted_at');
 
         if ($request->name) {
             $query->where('name', 'like', '%' . $request->name . '%');
@@ -31,9 +30,6 @@ class CategoryController extends Controller
 
         return DataTables::of($query)
             ->addIndexColumn()
-            ->addColumn('image', function ($row) {
-                return $row->image;
-            })
             ->addColumn('status', function ($row) {
                 $checked = $row->status === 'active' ? 'checked' : '';
                 return '<label class="switch">
@@ -57,95 +53,61 @@ class CategoryController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:categories,name',
-            'measurements' => 'nullable|string',
-            'measurement_ids' => 'nullable|array',
-            'youtube_url' => 'nullable|url',
+            'name' => 'required|string|max:255|unique:measurements,name',
+            'remark' => 'nullable|string',
+            'video_link' => 'nullable|url',
         ]);
 
-        $imageUrl = null;
-
-        if ($request->hasFile('image')) {
-            $file = $request->file('image');
-            $name = time().'_'.$file->getClientOriginalName();
-            $file->move(public_path('uploads/category'), $name);
-
-            $imageUrl = url('uploads/category/'.$name);
-        }
-
-        $category = Category::create([
+        Measurement::create([
             'name' => $request->name,
+            'remark' => $request->remark,
+            'video_link' => $request->video_link,
             'status' => $request->status ?? 'active',
-            'measurements' => $request->measurements,
-            'youtube_url' => $request->youtube_url,
-            'image' => $imageUrl,
         ]);
-
-        if ($request->has('measurement_ids')) {
-            $category->measurementItems()->sync($request->measurement_ids);
-        }
 
         return response()->json(['success' => true]);
     }
 
     public function edit($id)
     {
-        $category = Category::with('measurementItems')->findOrFail($id);
-        $category->measurement_ids = $category->measurementItems->pluck('id');
-        return $category;
+        return Measurement::findOrFail($id);
     }
 
     public function update(Request $request, $id)
     {
-        $category = Category::findOrFail($id);
+        $measurement = Measurement::findOrFail($id);
 
         $request->validate([
-            'name' => 'required|string|max:255|unique:categories,name,' . $category->id,
-            'measurements' => 'nullable|string',
-            'measurement_ids' => 'nullable|array',
-            'youtube_url' => 'nullable|url',
+            'name' => 'required|string|max:255|unique:measurements,name,' . $measurement->id,
+            'remark' => 'nullable|string',
+            'video_link' => 'nullable|url',
         ]);
 
-        $imageUrl = $category->image;
-
-        if ($request->hasFile('image')) {
-            $file = $request->file('image');
-            $name = time().'_'.$file->getClientOriginalName();
-            $file->move(public_path('uploads/category'), $name);
-
-            $imageUrl = url('uploads/category/'.$name);
-        }
-
-        $category->update([
+        $measurement->update([
             'name' => $request->name,
-            'status' => $request->status ?? $category->status,
-            'measurements' => $request->measurements,
-            'youtube_url' => $request->youtube_url,
-            'image' => $imageUrl,
+            'remark' => $request->remark,
+            'video_link' => $request->video_link,
+            'status' => $request->status ?? $measurement->status,
         ]);
-
-        if ($request->has('measurement_ids')) {
-            $category->measurementItems()->sync($request->measurement_ids);
-        }
 
         return response()->json([
             'success' => true,
-            'data' => $category,
+            'data' => $measurement,
         ]);
     }
 
     public function changeStatus(Request $request)
     {
-        $category = Category::findOrFail($request->id);
-        $category->status = $category->status === 'active' ? 'inactive' : 'active';
-        $category->save();
+        $measurement = Measurement::findOrFail($request->id);
+        $measurement->status = $measurement->status === 'active' ? 'inactive' : 'active';
+        $measurement->save();
 
         return response()->json(['success' => true]);
     }
 
     public function delete($id)
     {
-        Category::findOrFail($id)->delete();
+        Measurement::findOrFail($id)->delete();
 
         return response()->json(['success' => true]);
     }
@@ -154,7 +116,7 @@ class CategoryController extends Controller
     {
         $search = $request->get('q');
 
-        $query = Category::query()
+        $query = Measurement::query()
             ->where('status', 'active')
             ->whereNull('deleted_at');
 
@@ -166,10 +128,12 @@ class CategoryController extends Controller
             ->orderBy('name')
             ->limit(20)
             ->get()
-            ->map(function ($category) {
+            ->map(function ($measurement) {
                 return [
-                    'id' => $category->id,
-                    'text' => $category->name,
+                    'id' => $measurement->id,
+                    'text' => $measurement->name,
+                    'remark' => $measurement->remark,
+                    'video_link' => $measurement->video_link,
                 ];
             });
 

@@ -19,7 +19,7 @@ return new class extends Migration
             $table->enum('stitch_status', ['trial_ready', 'pending', 'complete'])->default('pending');
             $table->timestamps();
 
-            $table->unique(['order_id', 'category_id', 'stitch_master_id']);
+            $table->unique(['order_id', 'category_id', 'stitch_master_id'], 'ocs_order_cat_stitch_unique');
         });
 
         // Ensure we have deterministic enum values in case DB collation/settings differ.

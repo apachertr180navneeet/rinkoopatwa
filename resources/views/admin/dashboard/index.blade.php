@@ -82,11 +82,11 @@
 <div class="container-fluid flex-grow-1 container-p-y">
     <div class="row g-3">
 
-        <!-- Measurement Categories -->
+        <!-- Categories -->
         <div class="col-xl-3 col-lg-4 col-md-6 col-12">
             <div class="card dashboard-card shadow-sm">
                 <div class="card-body text-center p-3">
-                    <h5 class="card-title mb-2">Measurement Categories</h5>
+                    <h5 class="card-title mb-2">Categories</h5>
 
                     <div class="card-stats">
                         <p>Total: <strong>10</strong></p>

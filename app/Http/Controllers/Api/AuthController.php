@@ -627,48 +627,28 @@ class AuthController extends Controller
              * - Sorted by latest ID (descending)
              * ---------------------------------------------------------
              */
-            $categories = Category::whereIn('id', $ids)
+            $categories = Category::with('measurementItems')
+                ->whereIn('id', $ids)
                 ->latest('id')
-                ->get(['id', 'name', 'youtube_url', 'measurements']);
+                ->get();
 
-            /**
-             * ---------------------------------------------------------
-             * Prepare Category Response Data
-             * - Only return required fields
-             * ---------------------------------------------------------
-             */
             $categoryData = $categories->map->only([
                 'id',
                 'name',
                 'youtube_url'
             ]);
 
-            /**
-             * ---------------------------------------------------------
-             * Combine Measurements from All Categories
-             * Steps:
-             * 1. pluck() → get all measurement strings
-             * 2. filter() → remove null/empty values
-             * 3. flatMap() → split comma-separated values into array
-             * 4. trim() → clean spaces
-             * 5. unique() → remove duplicates
-             * 6. values() → reset array index
-             * ---------------------------------------------------------
-             */
-            $measurements = $categories
-                ->pluck('measurements')
-                ->filter()
-                ->flatMap(fn($m) => explode(',', $m))
-                ->map(fn($m) => trim($m))
-                ->filter()
-                ->unique()
-                ->values();
+            $measurements = $categories->flatMap(function ($cat) {
+                return $cat->measurementItems->map(function ($m) {
+                    return [
+                        'id' => $m->id,
+                        'name' => $m->name,
+                        'remark' => $m->remark,
+                        'video_link' => $m->video_link,
+                    ];
+                });
+            })->unique('id')->values();
 
-            /**
-             * ---------------------------------------------------------
-             * Final JSON Response
-             * ---------------------------------------------------------
-             */
             return response()->json([
                 'status' => true,
                 'message' => 'Categories found successfully.',
